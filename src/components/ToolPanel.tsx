@@ -22,12 +22,6 @@ const ToolPanel: React.FC<ToolPanelProps> = ({ activeTool, onToolChange }) => {
         Building
       </button>
       <button
-        className={activeTool === 'grass' ? 'active' : ''}
-        onClick={() => onToolChange('grass')}
-      >
-        Grass
-      </button>
-      <button
         className={activeTool === 'footpath' ? 'active' : ''}
         onClick={() => onToolChange('footpath')}
       >

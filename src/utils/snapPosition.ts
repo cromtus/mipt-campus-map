@@ -4,7 +4,6 @@ type SnapLine = {
 }
 
 export function snapPosition(
-    startPoint: number[],
     endPoint: { x: number; y: number },
     isCtrlPressed: boolean,
     allPoints: number[][]

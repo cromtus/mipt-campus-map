@@ -73,6 +73,10 @@ const App: React.FC = () => {
       if (e.key === 'Delete' && selectedPolygonIndex !== null) {
         handleDeletePolygon();
       }
+      if (e.key === 'c' && currentPolygon.length > 1) {
+        alert('c');
+        handlePolygonClose();
+      }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Control') setIsCtrlPressed(false);
@@ -85,13 +89,12 @@ const App: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [selectedPolygonIndex]);
+  }, [selectedPolygonIndex, currentPolygon]);
 
   useEffect(() => {
     if (mousePosition && currentPolygon.length > 0) {
-      const lastPoint = currentPolygon[currentPolygon.length - 1];
       const allPoints = getAllPoints(polygons).concat(currentPolygon);
-      const snappedInfo = snapPosition(lastPoint, mousePosition, isCtrlPressed, allPoints);
+      const snappedInfo = snapPosition(mousePosition, isCtrlPressed, allPoints);
       setSnappedInfo(snappedInfo);
       setSnappedMousePosition(snappedInfo.snapped);
     } else {
@@ -160,7 +163,7 @@ const App: React.FC = () => {
       y: (point.y - position.y) / scale,
     };
   
-    if (tool === 'building' || tool === 'grass' || tool === 'footpath' || tool === 'pavement') {
+    if (tool === 'building' || tool === 'footpath' || tool === 'pavement') {
       let newPoint;
       if (currentPolygon.length > 0) {
         newPoint = [snappedMousePosition!.x, snappedMousePosition!.y];
@@ -179,9 +182,6 @@ const App: React.FC = () => {
         }
       } else {
         setCurrentPolygon([...currentPolygon, newPoint]);
-        if (isCtrlPressed) {
-          handlePolygonClose();
-        }
       }
 
     } else if (tool === 'select') {
@@ -190,24 +190,37 @@ const App: React.FC = () => {
   };
 
   const handleNodeDrag = (polygonIndex: number, nodeIndex: number, newPosition: number[]) => {
+    const allPoints = getAllPoints(polygons);
+    const { snapped, snapLines } = snapPosition({ x: newPosition[0], y: newPosition[1] }, isCtrlPressed, allPoints);
+
     setPolygons(prevPolygons => {
       const updatedPolygons = [...prevPolygons];
       updatedPolygons[polygonIndex] = {
         ...updatedPolygons[polygonIndex],
         points: updatedPolygons[polygonIndex].points.map((point, i) => 
-          i === nodeIndex ? newPosition : point
+          i === nodeIndex ? [snapped.x, snapped.y] : point
         )
       };
       return updatedPolygons;
     });
+
+    setSnappedInfo({ snapped, snapLines });
   };
 
   const handlePolygonDrag = (polygonIndex: number, newPositions: number[][]) => {
+    const allPoints = getAllPoints(polygons.filter((_, index) => index !== polygonIndex));
+    const snappedPositions = newPositions.map(position => {
+      const { snapped } = snapPosition({ x: position[0], y: position[1] }, isCtrlPressed, allPoints);
+      return [snapped.x, snapped.y];
+    });
+
     setPolygons(prevPolygons => {
       const updatedPolygons = [...prevPolygons];
-      updatedPolygons[polygonIndex] = { ...updatedPolygons[polygonIndex], points: newPositions };
+      updatedPolygons[polygonIndex] = { ...updatedPolygons[polygonIndex], points: snappedPositions };
       return updatedPolygons;
     });
+
+    // We're not setting snappedInfo here because it might be confusing to show snap lines for all points
   };
 
   const handleToolChange = (newTool: Tool) => {
@@ -234,9 +247,6 @@ const App: React.FC = () => {
             color: '#000000'
           };
           break;
-        case 'grass':
-          newPolygon = { points: currentPolygon, type: 'grass' };
-          break;
         case 'footpath':
           newPolygon = { points: currentPolygon, type: 'footpath' };
           break;
@@ -252,7 +262,7 @@ const App: React.FC = () => {
   };
 
   const handleDoubleClick = () => {
-    if ((tool === 'building' || tool === 'grass' || tool === 'footpath' || tool === 'pavement') && currentPolygon.length > 1) {
+    if ((tool === 'building' || tool === 'footpath' || tool === 'pavement') && currentPolygon.length > 1) {
       handlePolygonClose();
     }
   };
@@ -354,7 +364,7 @@ const App: React.FC = () => {
   return (
     <div className="app">
       <div 
-        className={`canvas-container ${tool === 'building' || tool === 'grass' ? 'polygon-tool' : ''} ${tool === 'select' ? 'select-tool' : ''}`}
+        className={`canvas-container ${tool === 'building' ? 'polygon-tool' : ''} ${tool === 'select' ? 'select-tool' : ''}`}
         {...bind()}
       >
         <Stage
@@ -383,6 +393,7 @@ const App: React.FC = () => {
                     onNodeDrag={(nodeIndex, newPosition) => handleNodeDrag(index, nodeIndex, newPosition)}
                     onPolygonDrag={(newPositions) => handlePolygonDrag(index, newPositions)}
                     closed={poly.type !== 'footpath'}
+                    isCtrlPressed={isCtrlPressed}
                   />
                 )
                 const prism = poly.type === 'building' ? (
@@ -404,7 +415,7 @@ const App: React.FC = () => {
                   </React.Fragment>
                 )
               })}
-              {(tool === 'building' || tool === 'grass' || tool === 'footpath' || tool === 'pavement') && (
+              {(tool === 'building' || tool === 'footpath' || tool === 'pavement') && (
                 <PreviewPolygon 
                   points={currentPolygon} 
                   mousePosition={snappedMousePosition}
@@ -420,6 +431,7 @@ const App: React.FC = () => {
                     snapLine.to.x,
                     snapLine.to.y
                   ]}
+                  dash={[2, 2]}
                   stroke="red"
                   strokeWidth={1}
                 />
@@ -474,6 +486,8 @@ export default App;
 const polygonsCompareFn = (centerDot: { x: number; y: number }) => (a: Polygon, b: Polygon) => {
   if (a.type === 'grass') return -1;
   if (b.type === 'grass') return 1;
+  if (a.type === 'pavement') return -1;
+  if (b.type === 'pavement') return 1;
   if (a.type === 'footpath') return -1;
   if (b.type === 'footpath') return 1;
   // Sort buildings by distance from centerDot to the nearest polygon node

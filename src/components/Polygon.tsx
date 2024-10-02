@@ -10,6 +10,7 @@ interface PolygonProps {
   onNodeDrag: (index: number, newPosition: number[]) => void;
   onPolygonDrag: (newPositions: number[][]) => void;
   closed: boolean;
+  isCtrlPressed: boolean;
 }
 
 const Polygon: React.FC<PolygonProps> = ({ 
@@ -20,7 +21,8 @@ const Polygon: React.FC<PolygonProps> = ({
   type,
   onNodeDrag, 
   onPolygonDrag,
-  closed
+  closed,
+  isCtrlPressed
 }) => {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -52,13 +54,13 @@ const Polygon: React.FC<PolygonProps> = ({
   const getColors = () => {
     if (type === 'grass') {
       return {
-        fill: isHovered && !isSelected ? 'rgba(0, 100, 0, 0.5)' : 'rgba(0, 100, 0, 0.2)',
+        fill: isHovered && !isSelected ? 'rgba(0, 100, 0, 0.5)' : 'rgba(0, 100, 0, 0.1)',
       };
     } else if (type === 'footpath') {
       return {
-        stroke: 'green',
+        stroke: 'rgb(100, 200, 100)',
         fill: undefined,
-        strokeWidth: 2,
+        strokeWidth: 1,
         dash: [5, 5],
       };
     } else if (type === 'pavement') {
@@ -80,7 +82,7 @@ const Polygon: React.FC<PolygonProps> = ({
     <Group draggable={isSelected} onDragStart={handlePolygonDragStart} onDragEnd={handlePolygonDragEnd}>
       <Line
         points={points.flat()}
-        stroke="white"
+        stroke="rgba(255, 255, 255, 0.25)"
         strokeWidth={(strokeWidth || 0) + 4}
         closed={closed}
       />

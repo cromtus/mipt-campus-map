@@ -51,6 +51,8 @@ const Prism: React.FC<PrismProps> = ({
     })
     .sort((a, b) => b.distance - a.distance);
 
+  const strokeWidth = 1;
+
   return (
     <>
       {/* Base face */}
@@ -59,7 +61,7 @@ const Prism: React.FC<PrismProps> = ({
         closed={true}
         fill={faceColor}
         stroke={color}
-        strokeWidth={1}
+        strokeWidth={strokeWidth}
       />
       {/* Sorted side faces */}
       {sortedFaces.map(({ index }) => {
@@ -78,7 +80,7 @@ const Prism: React.FC<PrismProps> = ({
             closed={true}
             fill={faceColor}
             stroke={index % 2 === 0 ? color : (secondaryColor ?? color)}
-            strokeWidth={1}
+            strokeWidth={strokeWidth}
           />
         );
       })}
@@ -88,7 +90,7 @@ const Prism: React.FC<PrismProps> = ({
         closed={true}
         fill={faceColor}
         stroke={color}
-        strokeWidth={1}
+        strokeWidth={strokeWidth}
       />
     </>
   );
