@@ -1,0 +1,49 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.app {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+.canvas-container {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+
+.canvas-container.polygon-tool {
+    cursor: crosshair;
+}
+
+.canvas-container.select-tool {
+    cursor: pointer;
+}
+
+.tool-panel {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    background-color: white;
+    border-radius: 5px;
+    padding: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.tool-panel button {
+    margin-right: 10px;
+    padding: 5px 10px;
+    border: none;
+    background-color: #f0f0f0;
+    cursor: pointer;
+}
+
+.tool-panel button.active {
+    background-color: #3498db;
+    color: white;
+}

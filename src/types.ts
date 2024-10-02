@@ -1,0 +1,1 @@
+export type Tool = 'pan' | 'building' | 'grass' | 'select' | 'footpath' | 'pavement';
