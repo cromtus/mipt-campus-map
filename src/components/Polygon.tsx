@@ -7,8 +7,10 @@ interface PolygonProps {
   isHovered: boolean;
   isEditing: boolean;
   type: 'building' | 'grass' | 'footpath' | 'pavement' | 'road';
-  onNodeDrag: (index: number, newPosition: number[]) => void;
+  onNodeDrag: (index: number, newPosition: number[]) => number[] | undefined;
   onPolygonDrag: (newPositions: number[][]) => void;
+  onDragStart: (nodeIndex: number) => void;
+  onDragEnd: (nodeIndex: number) => void;
 }
 
 const Polygon: React.FC<PolygonProps> = ({ 
@@ -18,7 +20,9 @@ const Polygon: React.FC<PolygonProps> = ({
   isEditing, 
   type,
   onNodeDrag, 
-  onPolygonDrag
+  onPolygonDrag,
+  onDragStart,
+  onDragEnd
 }) => {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -44,7 +48,9 @@ const Polygon: React.FC<PolygonProps> = ({
   const handleNodeDragMove = (index: number) => (e: any) => {
     const node = e.target;
     const newPosition = [node.x(), node.y()];
-    onNodeDrag(index, newPosition);
+    const finalPosition = onNodeDrag(index, newPosition) ?? newPosition;
+    node.x(finalPosition[0]);
+    node.y(finalPosition[1]);
   };
 
   const getColors = () => {
@@ -88,6 +94,8 @@ const Polygon: React.FC<PolygonProps> = ({
           fill="red"
           draggable
           onDragMove={handleNodeDragMove(index)}
+          onDragStart={() => onDragStart(index)}
+          onDragEnd={() => onDragEnd(index)}
         />
       ))}
     </>

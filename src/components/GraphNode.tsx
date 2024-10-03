@@ -5,12 +5,14 @@ import { GraphNode as GraphNodeType } from '../types';
 interface GraphNodeProps {
   node: GraphNodeType;
   isSelected: boolean;
-  onDragMove: (node: GraphNodeType, newX: number, newY: number) => void;
+  onDragStart: (node: GraphNodeType) => void;
+  onDragEnd: (node: GraphNodeType) => void;
+  onDragMove: (node: GraphNodeType, newX: number, newY: number) => { x: number, y: number };
   isHovered: boolean;
   onHover: (nodeId: string | null) => void;
 }
 
-const GraphNode: React.FC<GraphNodeProps> = ({ node, isSelected, onDragMove, isHovered, onHover }) => {
+const GraphNode: React.FC<GraphNodeProps> = ({ node, isSelected, onDragStart, onDragEnd, onDragMove, isHovered, onHover }) => {
   return (
     <Circle
       x={node.x}
@@ -20,10 +22,12 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, isSelected, onDragMove, isH
       draggable
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}
+      onDragStart={() => onDragStart(node)}
+      onDragEnd={() => onDragEnd(node)}
       onDragMove={(e) => {
         const newX = e.target.x();
         const newY = e.target.y();
-        onDragMove(node, newX, newY);
+        e.target.position(onDragMove(node, newX, newY));
       }}
     />
   );

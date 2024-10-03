@@ -17,13 +17,18 @@ const GraphEdge: React.FC<GraphEdgeProps> = ({ edge, nodes, isPathwalk, isSelect
 
   if (!fromNode || !toNode) return null;
 
+  const stroke = isPathwalk ? (
+    isHovered || isSelected ? 'black' : 'green'
+   ) : (
+    isHovered || isSelected ? 'gray' : 'white'
+   );
+
   return (
     <Line
       points={[fromNode.x, fromNode.y, toNode.x, toNode.y]}
-      stroke={isPathwalk ? 'green' : 'white'}
+      stroke={stroke}
       strokeWidth={isPathwalk ? 2 : (edge.width || 10)}
       dash={isPathwalk ? [5, 5] : undefined}
-      opacity={isSelected || isHovered ? 0.5 : 1}
       onMouseEnter={() => onHover(edge.id)}
       onMouseLeave={() => onHover(null)}
     />

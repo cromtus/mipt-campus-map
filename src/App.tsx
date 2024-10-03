@@ -59,6 +59,8 @@ const App: React.FC = () => {
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [previewEdge, setPreviewEdge] = useState<{ from: GraphNode; to: { x: number; y: number } } | null>(null);
+  const [draggingPolygonNode, setDraggingPolygonNode] = useState<{ polygonIndex: number, nodeIndex: number } | null>(null);
+  const [draggingGraphNode, setDraggingGraphNode] = useState<GraphNode | null>(null);
 
   useEffect(() => {
     localStorage.setItem('polygons', JSON.stringify(polygons));
@@ -106,8 +108,20 @@ const App: React.FC = () => {
   }, [selectedPolygonIndex, selectedEdgeId]);
 
   useEffect(() => {
-    if (mousePosition && currentPolygon.length > 0) {
-      const allPoints = getAllPoints(polygons).concat(currentPolygon);
+    if (mousePosition) {
+      let allPoints: number[][] = []
+      if (tool === 'building' || tool === 'pavement') {
+        allPoints = getAllPolygonPoints(polygons).concat(currentPolygon);
+      } else if (tool === 'pathwalk' || tool === 'road') {
+        allPoints = getAllGraphPoints(pathwalkGraph.nodes).concat(getAllGraphPoints(roadGraph.nodes))
+      } else {
+        if (draggingPolygonNode) {
+          allPoints = getAllPolygonPoints(polygons, draggingPolygonNode.polygonIndex, draggingPolygonNode.nodeIndex)
+        }
+        if (draggingGraphNode) {
+          allPoints = getAllGraphPoints(pathwalkGraph.nodes, draggingGraphNode.id).concat(getAllGraphPoints(roadGraph.nodes, draggingGraphNode.id))
+        }
+      }
       const snappedInfo = snapPosition(mousePosition, isCtrlPressed, allPoints);
       setSnappedInfo(snappedInfo);
       setSnappedMousePosition(snappedInfo.snapped);
@@ -115,7 +129,7 @@ const App: React.FC = () => {
       setSnappedInfo(null);
       setSnappedMousePosition(mousePosition);
     }
-  }, [mousePosition, currentPolygon, isCtrlPressed, polygons]);
+  }, [mousePosition, currentPolygon, isCtrlPressed, polygons, pathwalkGraph, roadGraph]);
 
   const handleZoom = (e: WheelEvent, stage: any) => {
     e.preventDefault();
@@ -169,21 +183,9 @@ const App: React.FC = () => {
     },
   });
 
-  const handleStageClick = (e: any) => {
-    const stage = e.target.getStage();
-    const point = stage.getPointerPosition();
-    const scaledPoint = {
-      x: (point.x - position.x) / scale,
-      y: (point.y - position.y) / scale,
-    };
-  
+  const handleStageClick = (e: any) => {  
     if (tool === 'building' || tool === 'pavement') {
-      let newPoint;
-      if (currentPolygon.length > 0) {
-        newPoint = [snappedMousePosition!.x, snappedMousePosition!.y];
-      } else {
-        newPoint = [scaledPoint.x, scaledPoint.y];
-      }
+      const newPoint = [snappedMousePosition!.x, snappedMousePosition!.y];
   
       if (currentPolygon.length > 2 && 
         Math.abs(currentPolygon[0][0] - newPoint[0]) < 10 &&
@@ -241,26 +243,38 @@ const App: React.FC = () => {
     }
   };
 
-  const handleNodeDrag = (polygonIndex: number, nodeIndex: number, newPosition: number[]) => {
-    const allPoints = getAllPoints(polygons);
-    const { snapped, snapLines } = snapPosition({ x: newPosition[0], y: newPosition[1] }, isCtrlPressed, allPoints);
-
+  const handleNodeDrag = (polygonIndex: number, nodeIndex: number) => {
     setPolygons(prevPolygons => {
       const updatedPolygons = [...prevPolygons];
       updatedPolygons[polygonIndex] = {
         ...updatedPolygons[polygonIndex],
         points: updatedPolygons[polygonIndex].points.map((point, i) => 
-          i === nodeIndex ? [snapped.x, snapped.y] : point
+          i === nodeIndex ? (
+            snappedMousePosition ? [snappedMousePosition.x, snappedMousePosition.y] : point
+          ) : point
         )
       };
       return updatedPolygons;
     });
-
-    setSnappedInfo({ snapped, snapLines });
+    return snappedMousePosition ? [snappedMousePosition.x, snappedMousePosition.y] : undefined;
   };
+  
+  const handleGraphNodeDrag = (node: GraphNode) => {
+    // Update node position in the appropriate graph
+    const updateGraph = (prevGraph: Graph) => ({
+      ...prevGraph,
+      nodes: prevGraph.nodes.map(n => n.id === node.id ? { ...n, ...snappedMousePosition } : n),
+    });
+    if (pathwalkGraph.nodes.some(n => n.id === node.id)) {
+      setPathwalkGraph(updateGraph);
+    } else {
+      setRoadGraph(updateGraph);
+    }
+    return { ...node, ...snappedMousePosition };
+  }
 
   const handlePolygonDrag = (polygonIndex: number, newPositions: number[][]) => {
-    const allPoints = getAllPoints(polygons.filter((_, index) => index !== polygonIndex));
+    const allPoints = getAllPolygonPoints(polygons.filter((_, index) => index !== polygonIndex));
     const snappedPositions = newPositions.map(position => {
       const { snapped } = snapPosition({ x: position[0], y: position[1] }, isCtrlPressed, allPoints);
       return [snapped.x, snapped.y];
@@ -289,6 +303,7 @@ const App: React.FC = () => {
       setSelectedNodeId(null);
       setHoveredNodeId(null);
     }
+    setPreviewEdge(null);
   };
 
   const handlePolygonClose = () => {
@@ -456,16 +471,14 @@ const App: React.FC = () => {
 
     setHoveredPolygonIndex(hoveredIndex !== -1 ? hoveredIndex : null);
 
-    if (previewEdge) {
-      setPreviewEdge(prev => prev ? { ...prev, to: scaledPoint } : null);
-    }
+    setPreviewEdge(prev => prev ? { ...prev, to: snappedMousePosition ?? prev.from } : null);
   };
 
   const handleMouseLeave = () => {
     setHoveredPolygonIndex(null);
     setHoveredEdgeId(null);
     setHoveredNodeId(null);
-    setPreviewEdge(null);
+    setPreviewEdge(prev => prev ? { ...prev, to: prev.from } : null);
     setMousePosition(null);
   };
 
@@ -505,6 +518,28 @@ const App: React.FC = () => {
             <Group>
               {/* <Img image={imageElement} /> */}
               {renderPreviewPoint()}
+              {pathwalkGraph.edges.map(edge => (
+                <GraphEdgeComponent
+                  key={edge.id}
+                  edge={edge}
+                  nodes={pathwalkGraph.nodes}
+                  isPathwalk={true}
+                  isSelected={selectedEdgeId === edge.id}
+                  isHovered={hoveredEdgeId === edge.id}
+                  onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
+                />
+              ))}
+              {roadGraph.edges.map(edge => (
+                <GraphEdgeComponent
+                  key={edge.id}
+                  edge={edge}
+                  nodes={roadGraph.nodes}
+                  isPathwalk={false}
+                  isSelected={selectedEdgeId === edge.id}
+                  isHovered={hoveredEdgeId === edge.id}
+                  onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
+                />
+              ))}
               {polygons.sort(polygonsCompareFn(centerDot)).map((poly, index) => {
                 const polygon = (
                   <Polygon
@@ -513,8 +548,10 @@ const App: React.FC = () => {
                     isSelected={selectedPolygonIndex === index}
                     isHovered={hoveredPolygonIndex === index && tool === 'select'}
                     isEditing={tool === 'select' && selectedPolygonIndex === index}
-                    onNodeDrag={(nodeIndex, newPosition) => handleNodeDrag(index, nodeIndex, newPosition)}
+                    onNodeDrag={(nodeIndex) => handleNodeDrag(index, nodeIndex)}
                     onPolygonDrag={(newPositions) => handlePolygonDrag(index, newPositions)}
+                    onDragStart={(nodeIndex) => setDraggingPolygonNode({ polygonIndex: index, nodeIndex })}
+                    onDragEnd={() => setDraggingPolygonNode(null)}
                   />
                 )
                 const prism = poly.type === 'building' ? (
@@ -543,42 +580,6 @@ const App: React.FC = () => {
                   onClose={handlePolygonClose}
                 />
               )}
-              {snappedInfo && snappedInfo.snapLines.map((snapLine, index) => (
-                <Line
-                  key={index}
-                  points={[
-                    snapLine.from.x,
-                    snapLine.from.y,
-                    snapLine.to.x,
-                    snapLine.to.y
-                  ]}
-                  dash={[2, 2]}
-                  stroke="red"
-                  strokeWidth={1}
-                />
-              ))}
-              {pathwalkGraph.edges.map(edge => (
-                <GraphEdgeComponent
-                  key={edge.id}
-                  edge={edge}
-                  nodes={pathwalkGraph.nodes}
-                  isPathwalk={true}
-                  isSelected={selectedEdgeId === edge.id}
-                  isHovered={hoveredEdgeId === edge.id}
-                  onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
-                />
-              ))}
-              {roadGraph.edges.map(edge => (
-                <GraphEdgeComponent
-                  key={edge.id}
-                  edge={edge}
-                  nodes={roadGraph.nodes}
-                  isPathwalk={false}
-                  isSelected={selectedEdgeId === edge.id}
-                  isHovered={hoveredEdgeId === edge.id}
-                  onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
-                />
-              ))}
               {previewEdge && (
                 <PreviewEdge
                   from={previewEdge.from}
@@ -593,18 +594,23 @@ const App: React.FC = () => {
                   isSelected={selectedNodeId === node.id}
                   isHovered={hoveredNodeId === node.id}
                   onHover={(nodeId) => (tool === 'select' || tool === 'pathwalk' || tool === 'road') && setHoveredNodeId(nodeId)}
-                  onDragMove={(node: GraphNode, newX: number, newY: number) => {
-                    // Update node position in the appropriate graph
-                    const updateGraph = (prevGraph: Graph) => ({
-                      ...prevGraph,
-                      nodes: prevGraph.nodes.map(n => n.id === node.id ? { ...n, x: newX, y: newY } : n),
-                    });
-                    if (pathwalkGraph.nodes.some(n => n.id === node.id)) {
-                      setPathwalkGraph(updateGraph);
-                    } else {
-                      setRoadGraph(updateGraph);
-                    }
-                  }}
+                  onDragMove={handleGraphNodeDrag}
+                  onDragStart={node => setDraggingGraphNode(node)}
+                  onDragEnd={() => setDraggingGraphNode(null)}
+                />
+              ))}
+              {snappedInfo && snappedInfo.snapLines.map((snapLine, index) => (
+                <Line
+                  key={index}
+                  points={[
+                    snapLine.from.x,
+                    snapLine.from.y,
+                    snapLine.to.x,
+                    snapLine.to.y
+                  ]}
+                  dash={[2, 2]}
+                  stroke="red"
+                  strokeWidth={1}
                 />
               ))}
             </Group>
@@ -705,6 +711,12 @@ const polygonsCompareFn = (centerDot: { x: number; y: number }) => (a: Polygon, 
   return 0;
 }
 
-function getAllPoints(polygons: Polygon[]): number[][] {
-  return polygons.flatMap(polygon => polygon.points);
+function getAllPolygonPoints(polygons: Polygon[], excludePolygonIndex: number | null = null, excludeNodeIndex: number | null = null): number[][] {
+  return polygons.flatMap((polygon, index) => polygon.points.filter((_, nodeIndex) => 
+    index !== excludePolygonIndex || nodeIndex !== excludeNodeIndex
+  ));
+};
+
+function getAllGraphPoints(nodes: GraphNode[], excludeNodeId: string | null = null): number[][] {
+  return nodes.filter(node => node.id !== excludeNodeId).map(node => [node.x, node.y]);
 };
