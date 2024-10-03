@@ -8,6 +8,8 @@ interface PropertiesPanelProps {
   onHeightChange: (newHeight: number) => void;
   onColorChange: (newColor: string) => void;
   onSecondaryColorChange: (newColor: string | undefined) => void;
+  edgeWidth?: number;
+  onEdgeWidthChange?: (width: number) => void;
 }
 
 const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ 
@@ -16,7 +18,9 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   secondaryColor, 
   onHeightChange, 
   onColorChange, 
-  onSecondaryColorChange 
+  onSecondaryColorChange, 
+  edgeWidth, 
+  onEdgeWidthChange 
 }) => {
   const [useSecondaryColor, setUseSecondaryColor] = useState(!!secondaryColor);
   const [localSecondaryColor, setLocalSecondaryColor] = useState(secondaryColor || '#FFFFFF');
@@ -77,6 +81,17 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             type="color"
             value={localSecondaryColor}
             onChange={(e) => handleSecondaryColorChange(e.target.value)}
+          />
+        </label>
+      )}
+      {edgeWidth !== undefined && onEdgeWidthChange && (
+        <label>
+          Edge Width:
+          <input
+            type="number"
+            value={edgeWidth}
+            onChange={(e) => onEdgeWidthChange(Number(e.target.value))}
+            min="1"
           />
         </label>
       )}

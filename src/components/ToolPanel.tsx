@@ -33,6 +33,18 @@ const ToolPanel: React.FC<ToolPanelProps> = ({ activeTool, onToolChange }) => {
       >
         Pavement
       </button>
+      <button
+        className={activeTool === 'pathwalk' ? 'active' : ''}
+        onClick={() => onToolChange('pathwalk')}
+      >
+        Pathwalk
+      </button>
+      <button
+        className={activeTool === 'road' ? 'active' : ''}
+        onClick={() => onToolChange('road')}
+      >
+        Road
+      </button>
     </div>
   );
 };

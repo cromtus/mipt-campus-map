@@ -5,10 +5,14 @@ import ToolPanel from './components/ToolPanel';
 import Polygon from './components/Polygon';
 import PreviewPolygon from './components/PreviewPolygon';
 import PropertiesPanel from './components/PropertiesPanel';
-import { Tool } from './types';
+import { Tool, Graph, GraphNode, GraphEdge } from './types';
 import { snapPosition } from './utils/snapPosition';
 import Prism from './components/Prism';
 import LayersPanel from './components/LayersPanel';
+import GraphEdgeComponent from './components/GraphEdge';
+import GraphNodeComponent from './components/GraphNode';
+import EdgesList from './components/EdgesList';
+import EdgePropertiesPanel from './components/EdgePropertiesPanel';
 
 type Polygon = {
   points: number[][];
@@ -44,6 +48,12 @@ const App: React.FC = () => {
     snapped: { x: number; y: number };
     snapLines: { from: { x: number; y: number }, to: { x: number; y: number } }[];
   } | null>(null);
+  const [pathwalkGraph, setPathwalkGraph] = useState<Graph>({ nodes: [], edges: [] });
+  const [roadGraph, setRoadGraph] = useState<Graph>({ nodes: [], edges: [] });
+  const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [lastClickedNode, setLastClickedNode] = useState<GraphNode | null>(null);
+  const [isDrawingEdge, setIsDrawingEdge] = useState(true);
 
   useEffect(() => {
     localStorage.setItem('polygons', JSON.stringify(polygons));
@@ -73,6 +83,9 @@ const App: React.FC = () => {
       }
       if (e.key === 'c' && currentPolygon.length > 1) {
         handlePolygonClose();
+      }
+      if (e.key === 'c') {
+        setIsDrawingEdge(false);
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -179,6 +192,43 @@ const App: React.FC = () => {
 
     } else if (tool === 'select') {
       setSelectedPolygonIndex(hoveredPolygonIndex);
+    } else if (tool === 'pathwalk' || tool === 'road') {
+      const newNode: GraphNode = {
+        id: Date.now().toString(),
+        x: snappedMousePosition!.x,
+        y: snappedMousePosition!.y,
+      };
+
+      const graph = tool === 'pathwalk' ? pathwalkGraph : roadGraph;
+      const setGraph = tool === 'pathwalk' ? setPathwalkGraph : setRoadGraph;
+
+      const existingNode = graph.nodes.find(node => 
+        Math.abs(node.x - newNode.x) < 10 && Math.abs(node.y - newNode.y) < 10
+      );
+
+      if (!existingNode) {
+        setGraph(prevGraph => ({
+          ...prevGraph,
+          nodes: [...prevGraph.nodes, newNode],
+        }));
+      }
+
+      if (lastClickedNode && isDrawingEdge) {
+        const newEdge: GraphEdge = {
+          id: Date.now().toString(),
+          from: lastClickedNode.id,
+          to: existingNode ? existingNode.id : newNode.id,
+          width: tool === 'road' ? 10 : undefined,
+        };
+
+        setGraph(prevGraph => ({
+          ...prevGraph,
+          edges: [...prevGraph.edges, newEdge],
+        }));
+      }
+
+      setLastClickedNode(existingNode || newNode);
+      setIsDrawingEdge(true);
     }
   };
 
@@ -349,7 +399,7 @@ const App: React.FC = () => {
     <div className="app">
       <div 
         className={`canvas-container ${tool === 'building' ? 'polygon-tool' : ''} ${tool === 'select' ? 'select-tool' : ''}`}
-        {...bind()}
+                {...bind()}
       >
         <Stage
           width={window.innerWidth}
@@ -417,6 +467,46 @@ const App: React.FC = () => {
                   strokeWidth={1}
                 />
               ))}
+              {pathwalkGraph.edges.map(edge => (
+                <GraphEdgeComponent
+                  key={edge.id}
+                  edge={edge}
+                  nodes={pathwalkGraph.nodes}
+                  isPathwalk={true}
+                  isSelected={selectedEdge?.id === edge.id}
+                  onSelect={setSelectedEdge}
+                />
+              ))}
+              {roadGraph.edges.map(edge => (
+                <GraphEdgeComponent
+                  key={edge.id}
+                  edge={edge}
+                  nodes={roadGraph.nodes}
+                  isPathwalk={false}
+                  isSelected={selectedEdge?.id === edge.id}
+                  onSelect={setSelectedEdge}
+                />
+              ))}
+              {[...pathwalkGraph.nodes, ...roadGraph.nodes].map(node => (
+                <GraphNodeComponent
+                  key={node.id}
+                  node={node}
+                  isSelected={selectedNode?.id === node.id}
+                  onSelect={setSelectedNode}
+                  onDragMove={(node: GraphNode, newX: number, newY: number) => {
+                    // Update node position in the appropriate graph
+                    const updateGraph = (prevGraph: Graph) => ({
+                      ...prevGraph,
+                      nodes: prevGraph.nodes.map(n => n.id === node.id ? { ...n, x: newX, y: newY } : n),
+                    });
+                    if (pathwalkGraph.nodes.some(n => n.id === node.id)) {
+                      setPathwalkGraph(updateGraph);
+                    } else {
+                      setRoadGraph(updateGraph);
+                    }
+                  }}
+                />
+              ))}
             </Group>
             <Circle
               x={centerDot.x}
@@ -449,6 +539,29 @@ const App: React.FC = () => {
         selectedPolygonIndex={selectedPolygonIndex}
         onSelectPolygon={handleSelectPolygon}
       />
+      <EdgesList
+        edges={pathwalkGraph.edges}
+        selectedEdge={selectedEdge}
+        onSelectEdge={setSelectedEdge}
+        title="Pathwalk Edges"
+      />
+      <EdgesList
+        edges={roadGraph.edges}
+        selectedEdge={selectedEdge}
+        onSelectEdge={setSelectedEdge}
+        title="Road Edges"
+      />
+      {selectedEdge && selectedEdge.width !== undefined && (
+        <EdgePropertiesPanel
+          edgeWidth={selectedEdge.width}
+          onEdgeWidthChange={(newWidth) => {
+            setRoadGraph(prevGraph => ({
+              ...prevGraph,
+              edges: prevGraph.edges.map(e => e.id === selectedEdge.id ? { ...e, width: newWidth } : e),
+            }));
+          }}
+        />
+      )}
     </div>
   );
 };
