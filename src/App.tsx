@@ -14,8 +14,6 @@ type Polygon = {
   points: number[][];
 } & (
   | { type: 'building', height: number, color: string, secondaryColor?: string }
-  | { type: 'grass' }
-  | { type: 'footpath' }
   | { type: 'pavement' }
 )
 
@@ -74,7 +72,6 @@ const App: React.FC = () => {
         handleDeletePolygon();
       }
       if (e.key === 'c' && currentPolygon.length > 1) {
-        alert('c');
         handlePolygonClose();
       }
     };
@@ -163,7 +160,7 @@ const App: React.FC = () => {
       y: (point.y - position.y) / scale,
     };
   
-    if (tool === 'building' || tool === 'footpath' || tool === 'pavement') {
+    if (tool === 'building' || tool === 'pavement') {
       let newPoint;
       if (currentPolygon.length > 0) {
         newPoint = [snappedMousePosition!.x, snappedMousePosition!.y];
@@ -171,15 +168,11 @@ const App: React.FC = () => {
         newPoint = [scaledPoint.x, scaledPoint.y];
       }
   
-      if (tool !== 'footpath') {
-        if (currentPolygon.length > 2 && 
-          Math.abs(currentPolygon[0][0] - newPoint[0]) < 10 &&
-          Math.abs(currentPolygon[0][1] - newPoint[1]) < 10) {
-          // Close the polygon for building, grass, and pavement
-          handlePolygonClose();
-        } else {
-          setCurrentPolygon([...currentPolygon, newPoint]);
-        }
+      if (currentPolygon.length > 2 && 
+        Math.abs(currentPolygon[0][0] - newPoint[0]) < 10 &&
+        Math.abs(currentPolygon[0][1] - newPoint[1]) < 10) {
+        // Close the polygon for building and pavement
+        handlePolygonClose();
       } else {
         setCurrentPolygon([...currentPolygon, newPoint]);
       }
@@ -247,9 +240,6 @@ const App: React.FC = () => {
             color: '#000000'
           };
           break;
-        case 'footpath':
-          newPolygon = { points: currentPolygon, type: 'footpath' };
-          break;
         case 'pavement':
           newPolygon = { points: currentPolygon, type: 'pavement' };
           break;
@@ -258,12 +248,6 @@ const App: React.FC = () => {
       }
       setPolygons([...polygons, newPolygon]);
       setCurrentPolygon([]);
-    }
-  };
-
-  const handleDoubleClick = () => {
-    if ((tool === 'building' || tool === 'footpath' || tool === 'pavement') && currentPolygon.length > 1) {
-      handlePolygonClose();
     }
   };
 
@@ -372,7 +356,6 @@ const App: React.FC = () => {
           height={window.innerHeight}
           ref={stageRef}
           onClick={handleStageClick}
-          onDblClick={handleDoubleClick}
           onMouseMove={handleMouseMove}
           scaleX={scale}
           scaleY={scale}
@@ -392,8 +375,6 @@ const App: React.FC = () => {
                     isEditing={tool === 'select' && selectedPolygonIndex === index}
                     onNodeDrag={(nodeIndex, newPosition) => handleNodeDrag(index, nodeIndex, newPosition)}
                     onPolygonDrag={(newPositions) => handlePolygonDrag(index, newPositions)}
-                    closed={poly.type !== 'footpath'}
-                    isCtrlPressed={isCtrlPressed}
                   />
                 )
                 const prism = poly.type === 'building' ? (
@@ -415,7 +396,7 @@ const App: React.FC = () => {
                   </React.Fragment>
                 )
               })}
-              {(tool === 'building' || tool === 'footpath' || tool === 'pavement') && (
+              {(tool === 'building' || tool === 'pavement') && (
                 <PreviewPolygon 
                   points={currentPolygon} 
                   mousePosition={snappedMousePosition}
@@ -449,15 +430,19 @@ const App: React.FC = () => {
         </Stage>
       </div>
       <ToolPanel activeTool={tool} onToolChange={handleToolChange} />
-      {selectedPolygonIndex !== null && polygons[selectedPolygonIndex].type === 'building' && (
-        <PropertiesPanel
-          height={polygons[selectedPolygonIndex].height}
-          color={polygons[selectedPolygonIndex].color}
-          secondaryColor={polygons[selectedPolygonIndex].secondaryColor}
-          onHeightChange={handleHeightChange}
-          onColorChange={handleColorChange}
-          onSecondaryColorChange={handleSecondaryColorChange}
-        />
+      {selectedPolygonIndex !== null && (
+        <>
+          {polygons[selectedPolygonIndex].type === 'building' && (
+            <PropertiesPanel
+              height={polygons[selectedPolygonIndex].height}
+              color={polygons[selectedPolygonIndex].color}
+              secondaryColor={polygons[selectedPolygonIndex].secondaryColor}
+              onHeightChange={handleHeightChange}
+              onColorChange={handleColorChange}
+              onSecondaryColorChange={handleSecondaryColorChange}
+            />
+          )}
+        </>
       )}
       <LayersPanel 
         polygons={polygons}
@@ -484,12 +469,8 @@ function isPointInPolygon(point: { x: number; y: number }, polygon: number[][]) 
 export default App;
 
 const polygonsCompareFn = (centerDot: { x: number; y: number }) => (a: Polygon, b: Polygon) => {
-  if (a.type === 'grass') return -1;
-  if (b.type === 'grass') return 1;
   if (a.type === 'pavement') return -1;
   if (b.type === 'pavement') return 1;
-  if (a.type === 'footpath') return -1;
-  if (b.type === 'footpath') return 1;
   // Sort buildings by distance from centerDot to the nearest polygon node
   if (a.type === 'building' && b.type === 'building') {
     const aDistance = Math.min(...a.points.map(point => 

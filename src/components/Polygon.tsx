@@ -6,11 +6,9 @@ interface PolygonProps {
   isSelected: boolean;
   isHovered: boolean;
   isEditing: boolean;
-  type: 'building' | 'grass' | 'footpath' | 'pavement';
+  type: 'building' | 'grass' | 'footpath' | 'pavement' | 'road';
   onNodeDrag: (index: number, newPosition: number[]) => void;
   onPolygonDrag: (newPositions: number[][]) => void;
-  closed: boolean;
-  isCtrlPressed: boolean;
 }
 
 const Polygon: React.FC<PolygonProps> = ({ 
@@ -20,9 +18,7 @@ const Polygon: React.FC<PolygonProps> = ({
   isEditing, 
   type,
   onNodeDrag, 
-  onPolygonDrag,
-  closed,
-  isCtrlPressed
+  onPolygonDrag
 }) => {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -56,13 +52,6 @@ const Polygon: React.FC<PolygonProps> = ({
       return {
         fill: isHovered && !isSelected ? 'rgba(0, 100, 0, 0.5)' : 'rgba(0, 100, 0, 0.1)',
       };
-    } else if (type === 'footpath') {
-      return {
-        stroke: 'rgb(100, 200, 100)',
-        fill: undefined,
-        strokeWidth: 1,
-        dash: [5, 5],
-      };
     } else if (type === 'pavement') {
       return {
         fill: 'rgba(245, 245, 224, 1)', // Light yellow
@@ -76,42 +65,20 @@ const Polygon: React.FC<PolygonProps> = ({
     }
   };
 
-  const { stroke, fill, strokeWidth, dash } = getColors();
-
-  const renderPolyline = () => (
-    <Group draggable={isSelected} onDragStart={handlePolygonDragStart} onDragEnd={handlePolygonDragEnd}>
-      <Line
-        points={points.flat()}
-        stroke="rgba(255, 255, 255, 0.25)"
-        strokeWidth={(strokeWidth || 0) + 4}
-        closed={closed}
-      />
-      <Line
-        points={points.flat()}
-        stroke={stroke}
-        strokeWidth={strokeWidth}
-        dash={dash}
-        closed={closed}
-      />
-    </Group>
-  );
-
-  const renderPolygon = () => (
-    <Line
-      points={points.flat()}
-      closed={closed}
-      stroke={stroke}
-      fill={fill}
-      strokeWidth={strokeWidth || (isSelected || isHovered ? 3 : 2)}
-      draggable={isSelected}
-      onDragStart={handlePolygonDragStart}
-      onDragEnd={handlePolygonDragEnd}
-    />
-  );
+  const { stroke, fill, strokeWidth } = getColors();
 
   return (
     <>
-      {type === 'footpath' ? renderPolyline() : renderPolygon()}
+      <Line
+        points={points.flat()}
+        closed={true}
+        stroke={stroke}
+        fill={fill}
+        strokeWidth={strokeWidth || (isSelected || isHovered ? 3 : 2)}
+        draggable={isSelected}
+        onDragStart={handlePolygonDragStart}
+        onDragEnd={handlePolygonDragEnd}
+      />
       {isEditing && !isDragging && points.map((point, index) => (
         <Circle
           key={index}
