@@ -13,6 +13,8 @@ import GraphEdgeComponent from './components/GraphEdge';
 import GraphNodeComponent from './components/GraphNode';
 import EdgesList from './components/EdgesList';
 import EdgePropertiesPanel from './components/EdgePropertiesPanel';
+import PreviewEdge from './components/PreviewEdge';
+import PreviewPoint from './components/PreviewPoint';
 
 type Polygon = {
   points: number[][];
@@ -50,10 +52,13 @@ const App: React.FC = () => {
   } | null>(null);
   const [pathwalkGraph, setPathwalkGraph] = useState<Graph>({ nodes: [], edges: [] });
   const [roadGraph, setRoadGraph] = useState<Graph>({ nodes: [], edges: [] });
-  const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [lastClickedNode, setLastClickedNode] = useState<GraphNode | null>(null);
   const [isDrawingEdge, setIsDrawingEdge] = useState(true);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [previewEdge, setPreviewEdge] = useState<{ from: GraphNode; to: { x: number; y: number } } | null>(null);
 
   useEffect(() => {
     localStorage.setItem('polygons', JSON.stringify(polygons));
@@ -78,14 +83,13 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Control') setIsCtrlPressed(true);
-      if (e.key === 'Delete' && selectedPolygonIndex !== null) {
+      if (e.key === 'Delete') {
         handleDeletePolygon();
-      }
-      if (e.key === 'c' && currentPolygon.length > 1) {
-        handlePolygonClose();
+        handleDeleteEdge();
       }
       if (e.key === 'c') {
         setIsDrawingEdge(false);
+        setPreviewEdge(null);
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -99,7 +103,7 @@ const App: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [selectedPolygonIndex, currentPolygon]);
+  }, [selectedPolygonIndex, selectedEdgeId]);
 
   useEffect(() => {
     if (mousePosition && currentPolygon.length > 0) {
@@ -192,6 +196,8 @@ const App: React.FC = () => {
 
     } else if (tool === 'select') {
       setSelectedPolygonIndex(hoveredPolygonIndex);
+      setSelectedEdgeId(hoveredEdgeId)
+      setSelectedNodeId(hoveredNodeId)
     } else if (tool === 'pathwalk' || tool === 'road') {
       const newNode: GraphNode = {
         id: Date.now().toString(),
@@ -226,7 +232,10 @@ const App: React.FC = () => {
           edges: [...prevGraph.edges, newEdge],
         }));
       }
-
+      setPreviewEdge({
+        from: existingNode || newNode,
+        to: { x: newNode.x, y: newNode.y },
+      });
       setLastClickedNode(existingNode || newNode);
       setIsDrawingEdge(true);
     }
@@ -275,6 +284,10 @@ const App: React.FC = () => {
     if (newTool !== 'select') {
       setSelectedPolygonIndex(null);
       setHoveredPolygonIndex(null);
+      setSelectedEdgeId(null);
+      setHoveredEdgeId(null);
+      setSelectedNodeId(null);
+      setHoveredNodeId(null);
     }
   };
 
@@ -314,7 +327,48 @@ const App: React.FC = () => {
     if (selectedPolygonIndex !== null) {
       setPolygons(prevPolygons => prevPolygons.filter((_, index) => index !== selectedPolygonIndex));
       setSelectedPolygonIndex(null);
+      setHoveredPolygonIndex(null);
     }
+  };
+
+  const handleDeleteEdge = () => {
+    if (selectedEdgeId !== null) {
+      const edge = roadGraph.edges.find(e => e.id === selectedEdgeId) || pathwalkGraph.edges.find(e => e.id === selectedEdgeId);
+      if (edge) {
+        // Delete nodes with only one incident edge
+        const nodeIds = [edge.from, edge.to];
+        for (const nodeId of nodeIds) {
+          const incidentEdges = roadGraph.edges.filter(e => e.from === nodeId || e.to === nodeId)
+            .concat(pathwalkGraph.edges.filter(e => e.from === nodeId || e.to === nodeId));
+          if (incidentEdges.length === 1) {
+            deleteNode(nodeId);
+          }
+        }
+      }
+      setRoadGraph(prevGraph => ({
+        ...prevGraph,
+        edges: prevGraph.edges.filter(e => e.id !== selectedEdgeId),
+      }));
+      setPathwalkGraph(prevGraph => ({
+        ...prevGraph,
+        edges: prevGraph.edges.filter(e => e.id !== selectedEdgeId),
+      }));
+      setSelectedEdgeId(null);
+      setHoveredEdgeId(null);
+      setSelectedNodeId(null);
+      setHoveredNodeId(null);
+    }
+  };
+
+  const deleteNode = (nodeId: string) => {
+    setRoadGraph(prevGraph => ({
+      ...prevGraph,
+      nodes: prevGraph.nodes.filter(n => n.id !== nodeId),
+    }));
+    setPathwalkGraph(prevGraph => ({
+      ...prevGraph,
+      nodes: prevGraph.nodes.filter(n => n.id !== nodeId),
+    }));
   };
 
   const [imageElement, setImageElement] = useState<HTMLImageElement | undefined>(undefined);
@@ -376,6 +430,14 @@ const App: React.FC = () => {
   const handleSelectPolygon = (index: number) => {
     setTool('select');
     setSelectedPolygonIndex(index);
+    setSelectedEdgeId(null);
+    setSelectedNodeId(null);
+  };
+
+  const handleSelectEdge = (edgeId: string | null) => {
+    setSelectedEdgeId(edgeId);
+    setSelectedPolygonIndex(null);
+    setSelectedNodeId(null);
   };
 
   const handleMouseMove = (e: any) => {
@@ -393,8 +455,34 @@ const App: React.FC = () => {
     const hoveredIndex = hoveredPoly ? polygons.indexOf(hoveredPoly) : null;
 
     setHoveredPolygonIndex(hoveredIndex !== -1 ? hoveredIndex : null);
+
+    if (previewEdge) {
+      setPreviewEdge(prev => prev ? { ...prev, to: scaledPoint } : null);
+    }
   };
 
+  const handleMouseLeave = () => {
+    setHoveredPolygonIndex(null);
+    setHoveredEdgeId(null);
+    setHoveredNodeId(null);
+    setPreviewEdge(null);
+    setMousePosition(null);
+  };
+
+  const renderPreviewPoint = () => {
+    if ((tool !== 'select' && tool !== 'pan') && snappedMousePosition) {
+      return (
+        <PreviewPoint
+          x={snappedMousePosition.x}
+          y={snappedMousePosition.y}
+        />
+      );
+    }
+    return null;
+  };
+
+  const selectedEdgeType = selectedEdgeId != null ? (roadGraph.edges.some(e => e.id === selectedEdgeId) ? 'road' : 'pathwalk') : null;
+  const selectedEdge = selectedEdgeId != null ? (roadGraph.edges.find(e => e.id === selectedEdgeId) || pathwalkGraph.edges.find(e => e.id === selectedEdgeId)) : null;
   return (
     <div className="app">
       <div 
@@ -407,6 +495,7 @@ const App: React.FC = () => {
           ref={stageRef}
           onClick={handleStageClick}
           onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
           scaleX={scale}
           scaleY={scale}
           x={position.x}
@@ -415,6 +504,7 @@ const App: React.FC = () => {
           <Layer>
             <Group>
               {/* <Img image={imageElement} /> */}
+              {renderPreviewPoint()}
               {polygons.sort(polygonsCompareFn(centerDot)).map((poly, index) => {
                 const polygon = (
                   <Polygon
@@ -473,8 +563,9 @@ const App: React.FC = () => {
                   edge={edge}
                   nodes={pathwalkGraph.nodes}
                   isPathwalk={true}
-                  isSelected={selectedEdge?.id === edge.id}
-                  onSelect={setSelectedEdge}
+                  isSelected={selectedEdgeId === edge.id}
+                  isHovered={hoveredEdgeId === edge.id}
+                  onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
                 />
               ))}
               {roadGraph.edges.map(edge => (
@@ -483,16 +574,25 @@ const App: React.FC = () => {
                   edge={edge}
                   nodes={roadGraph.nodes}
                   isPathwalk={false}
-                  isSelected={selectedEdge?.id === edge.id}
-                  onSelect={setSelectedEdge}
+                  isSelected={selectedEdgeId === edge.id}
+                  isHovered={hoveredEdgeId === edge.id}
+                  onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
                 />
               ))}
+              {previewEdge && (
+                <PreviewEdge
+                  from={previewEdge.from}
+                  to={previewEdge.to}
+                  isPathwalk={tool === 'pathwalk'}
+                />
+              )}
               {[...pathwalkGraph.nodes, ...roadGraph.nodes].map(node => (
                 <GraphNodeComponent
                   key={node.id}
                   node={node}
-                  isSelected={selectedNode?.id === node.id}
-                  onSelect={setSelectedNode}
+                  isSelected={selectedNodeId === node.id}
+                  isHovered={hoveredNodeId === node.id}
+                  onHover={(nodeId) => (tool === 'select' || tool === 'pathwalk' || tool === 'road') && setHoveredNodeId(nodeId)}
                   onDragMove={(node: GraphNode, newX: number, newY: number) => {
                     // Update node position in the appropriate graph
                     const updateGraph = (prevGraph: Graph) => ({
@@ -534,30 +634,38 @@ const App: React.FC = () => {
           )}
         </>
       )}
-      <LayersPanel 
-        polygons={polygons}
-        selectedPolygonIndex={selectedPolygonIndex}
-        onSelectPolygon={handleSelectPolygon}
-      />
-      <EdgesList
-        edges={pathwalkGraph.edges}
-        selectedEdge={selectedEdge}
-        onSelectEdge={setSelectedEdge}
-        title="Pathwalk Edges"
-      />
-      <EdgesList
-        edges={roadGraph.edges}
-        selectedEdge={selectedEdge}
-        onSelectEdge={setSelectedEdge}
-        title="Road Edges"
-      />
-      {selectedEdge && selectedEdge.width !== undefined && (
+      {selectedPolygonIndex != null && (
+        <LayersPanel 
+          polygons={polygons}
+          selectedPolygonIndex={selectedPolygonIndex}
+          onSelectPolygon={handleSelectPolygon}
+        />
+      )}
+      {selectedEdgeId != null && selectedEdgeType === 'road' && (
+        <EdgesList
+          edges={roadGraph.edges}
+          selectedEdgeId={selectedEdgeId}
+          onSelectEdge={handleSelectEdge}
+          title="Road Edges"
+          className="road-edges-list"
+        />
+      )}
+      {selectedEdgeId != null && selectedEdgeType === 'pathwalk' && (
+        <EdgesList
+          edges={pathwalkGraph.edges}
+          selectedEdgeId={selectedEdgeId}
+          onSelectEdge={handleSelectEdge}
+          title="Pathwalk Edges"
+          className="pathwalk-edges-list"
+        />
+      )}
+      {selectedEdge?.width != null && (
         <EdgePropertiesPanel
           edgeWidth={selectedEdge.width}
           onEdgeWidthChange={(newWidth) => {
             setRoadGraph(prevGraph => ({
               ...prevGraph,
-              edges: prevGraph.edges.map(e => e.id === selectedEdge.id ? { ...e, width: newWidth } : e),
+              edges: prevGraph.edges.map(e => e.id === selectedEdgeId ? { ...e, width: newWidth } : e),
             }));
           }}
         />

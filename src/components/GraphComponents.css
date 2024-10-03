@@ -1,13 +1,21 @@
 .edges-list {
     position: absolute;
-    top: 10px;
-    right: 10px;
     background-color: rgba(255, 255, 255, 0.8);
     border: 1px solid #ccc;
     border-radius: 5px;
     padding: 10px;
     max-height: 300px;
     overflow-y: auto;
+  }
+
+  .road-edges-list {
+    bottom: 10px;
+    right: 10px;
+  }
+  
+  .pathwalk-edges-list {
+    bottom: 10px;
+    right: 10px;
   }
   
   .edges-list h3 {
@@ -36,12 +44,13 @@
   
   .edge-properties-panel {
     position: absolute;
-    bottom: 10px;
+    top: 10px;
     right: 10px;
     background-color: rgba(255, 255, 255, 0.8);
     border: 1px solid #ccc;
     border-radius: 5px;
     padding: 10px;
+    width: 200px; /* Adjust as needed */
   }
   
   .edge-properties-panel h3 {

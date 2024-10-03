@@ -4,21 +4,22 @@ import './GraphComponents.css';
 
 interface EdgesListProps {
   edges: GraphEdge[];
-  selectedEdge: GraphEdge | null;
-  onSelectEdge: (edge: GraphEdge) => void;
+  selectedEdgeId: string | null;
+  onSelectEdge: (edgeId: string | null) => void;
   title: string;
+  className?: string;
 }
 
-const EdgesList: React.FC<EdgesListProps> = ({ edges, selectedEdge, onSelectEdge, title }) => {
+const EdgesList: React.FC<EdgesListProps> = ({ edges, selectedEdgeId, onSelectEdge, title, className }) => {
   return (
-    <div className="edges-list">
+    <div className={`edges-list ${className || ''}`}>
       <h3>{title}</h3>
       <ul>
         {edges.map(edge => (
           <li
             key={edge.id}
-            onClick={() => onSelectEdge(edge)}
-            className={selectedEdge?.id === edge.id ? 'selected' : ''}
+            onClick={() => onSelectEdge(edge.id)}
+            className={selectedEdgeId === edge.id ? 'selected' : ''}
           >
             Edge {edge.id}
           </li>

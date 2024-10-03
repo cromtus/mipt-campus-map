@@ -7,10 +7,11 @@ interface GraphEdgeProps {
   nodes: GraphNode[];
   isPathwalk: boolean;
   isSelected: boolean;
-  onSelect: (edge: GraphEdgeType) => void;
+  isHovered: boolean;
+  onHover: (edgeId: string | null) => void;
 }
 
-const GraphEdge: React.FC<GraphEdgeProps> = ({ edge, nodes, isPathwalk, isSelected, onSelect }) => {
+const GraphEdge: React.FC<GraphEdgeProps> = ({ edge, nodes, isPathwalk, isSelected, isHovered, onHover }) => {
   const fromNode = nodes.find(node => node.id === edge.from);
   const toNode = nodes.find(node => node.id === edge.to);
 
@@ -22,9 +23,9 @@ const GraphEdge: React.FC<GraphEdgeProps> = ({ edge, nodes, isPathwalk, isSelect
       stroke={isPathwalk ? 'green' : 'white'}
       strokeWidth={isPathwalk ? 2 : (edge.width || 10)}
       dash={isPathwalk ? [5, 5] : undefined}
-      onClick={() => onSelect(edge)}
-      onTap={() => onSelect(edge)}
-      opacity={isSelected ? 0.5 : 1}
+      opacity={isSelected || isHovered ? 0.5 : 1}
+      onMouseEnter={() => onHover(edge.id)}
+      onMouseLeave={() => onHover(null)}
     />
   );
 };
