@@ -50,13 +50,9 @@ const App: React.FC = () => {
     snapped: { x: number; y: number };
     snapLines: { from: { x: number; y: number }, to: { x: number; y: number } }[];
   } | null>(null);
-  const [pathwalkGraph, setPathwalkGraph] = useState<Graph>(() => {
-    const savedPathwalkGraph = localStorage.getItem('pathwalkGraph');
-    return savedPathwalkGraph ? JSON.parse(savedPathwalkGraph) : { nodes: [], edges: [] };
-  });
-  const [roadGraph, setRoadGraph] = useState<Graph>(() => {
-    const savedRoadGraph = localStorage.getItem('roadGraph');
-    return savedRoadGraph ? JSON.parse(savedRoadGraph) : { nodes: [], edges: [] };
+  const [graph, setGraph] = useState<Graph>(() => {
+    const savedGraph = localStorage.getItem('graph');
+    return savedGraph ? JSON.parse(savedGraph) : { nodes: [], edges: [] };
   });
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -77,12 +73,8 @@ const App: React.FC = () => {
   }, [centerDot]);
 
   useEffect(() => {
-    localStorage.setItem('pathwalkGraph', JSON.stringify(pathwalkGraph));
-  }, [pathwalkGraph]);
-  
-  useEffect(() => {
-    localStorage.setItem('roadGraph', JSON.stringify(roadGraph));
-  }, [roadGraph]);
+    localStorage.setItem('graph', JSON.stringify(graph));
+  }, [graph]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -127,13 +119,13 @@ const App: React.FC = () => {
       if (tool === 'building' || tool === 'pavement') {
         allPoints = getAllPolygonPoints(polygons).concat(currentPolygon);
       } else if (tool === 'pathwalk' || tool === 'road') {
-        allPoints = getAllGraphPoints(pathwalkGraph.nodes).concat(getAllGraphPoints(roadGraph.nodes))
+        allPoints = getAllGraphPoints(graph.nodes)
       } else {
         if (draggingPolygonNode) {
           allPoints = getAllPolygonPoints(polygons, draggingPolygonNode.polygonIndex, draggingPolygonNode.nodeIndex)
         }
         if (draggingGraphNode) {
-          allPoints = getAllGraphPoints(pathwalkGraph.nodes, draggingGraphNode.id).concat(getAllGraphPoints(roadGraph.nodes, draggingGraphNode.id))
+          allPoints = getAllGraphPoints(graph.nodes, draggingGraphNode.id)
         }
       }
       const snappedInfo = snapPosition(mousePosition, isCtrlPressed, allPoints);
@@ -143,7 +135,7 @@ const App: React.FC = () => {
       setSnappedInfo(null);
       setSnappedMousePosition(mousePosition);
     }
-  }, [mousePosition, currentPolygon, isCtrlPressed, polygons, pathwalkGraph, roadGraph]);
+  }, [mousePosition, currentPolygon, isCtrlPressed, polygons, graph]);
 
   const handleZoom = (e: WheelEvent, stage: any) => {
     e.preventDefault();
@@ -197,7 +189,7 @@ const App: React.FC = () => {
     },
   });
 
-  const handleStageClick = (e: any) => {  
+  const handleStageClick = (e: any) => {
     if (tool === 'building' || tool === 'pavement') {
       const newPoint = [snappedMousePosition!.x, snappedMousePosition!.y];
   
@@ -219,20 +211,15 @@ const App: React.FC = () => {
         id: Date.now().toString(),
         x: snappedMousePosition!.x,
         y: snappedMousePosition!.y,
+        edges: [],
       };
-
-      const graph = tool === 'pathwalk' ? pathwalkGraph : roadGraph;
-      const setGraph = tool === 'pathwalk' ? setPathwalkGraph : setRoadGraph;
 
       const existingNode = graph.nodes.find(node => 
         Math.abs(node.x - newNode.x) < 10 && Math.abs(node.y - newNode.y) < 10
       );
 
       if (!existingNode) {
-        setGraph(prevGraph => ({
-          ...prevGraph,
-          nodes: [...prevGraph.nodes, newNode],
-        }));
+        setGraph(prevGraph => addNode(prevGraph, newNode));
       }
 
       if (lastClickedNode && isDrawingEdge) {
@@ -240,13 +227,10 @@ const App: React.FC = () => {
           id: Date.now().toString(),
           from: lastClickedNode.id,
           to: existingNode ? existingNode.id : newNode.id,
-          width: tool === 'road' ? 10 : undefined,
+          ...(tool === 'road' ? { type: 'road', width: 10 } : { type: 'pathwalk' }),
         };
 
-        setGraph(prevGraph => ({
-          ...prevGraph,
-          edges: [...prevGraph.edges, newEdge],
-        }));
+        setGraph(prevGraph => addEdge(prevGraph, newEdge));
       }
       setPreviewEdge({
         from: existingNode || newNode,
@@ -275,15 +259,10 @@ const App: React.FC = () => {
   
   const handleGraphNodeDrag = (node: GraphNode) => {
     // Update node position in the appropriate graph
-    const updateGraph = (prevGraph: Graph) => ({
+    setGraph(prevGraph => ({
       ...prevGraph,
       nodes: prevGraph.nodes.map(n => n.id === node.id ? { ...n, ...snappedMousePosition } : n),
-    });
-    if (pathwalkGraph.nodes.some(n => n.id === node.id)) {
-      setPathwalkGraph(updateGraph);
-    } else {
-      setRoadGraph(updateGraph);
-    }
+    }));
     return { ...node, ...snappedMousePosition };
   }
 
@@ -364,42 +343,12 @@ const App: React.FC = () => {
 
   const handleDeleteEdge = () => {
     if (selectedEdgeId !== null) {
-      const edge = roadGraph.edges.find(e => e.id === selectedEdgeId) || pathwalkGraph.edges.find(e => e.id === selectedEdgeId);
-      if (edge) {
-        // Delete nodes with only one incident edge
-        const nodeIds = [edge.from, edge.to];
-        for (const nodeId of nodeIds) {
-          const incidentEdges = roadGraph.edges.filter(e => e.from === nodeId || e.to === nodeId)
-            .concat(pathwalkGraph.edges.filter(e => e.from === nodeId || e.to === nodeId));
-          if (incidentEdges.length === 1) {
-            deleteNode(nodeId);
-          }
-        }
-      }
-      setRoadGraph(prevGraph => ({
-        ...prevGraph,
-        edges: prevGraph.edges.filter(e => e.id !== selectedEdgeId),
-      }));
-      setPathwalkGraph(prevGraph => ({
-        ...prevGraph,
-        edges: prevGraph.edges.filter(e => e.id !== selectedEdgeId),
-      }));
+      setGraph(prevGraph => removeEdge(prevGraph, selectedEdgeId));
       setSelectedEdgeId(null);
       setHoveredEdgeId(null);
       setSelectedNodeId(null);
       setHoveredNodeId(null);
     }
-  };
-
-  const deleteNode = (nodeId: string) => {
-    setRoadGraph(prevGraph => ({
-      ...prevGraph,
-      nodes: prevGraph.nodes.filter(n => n.id !== nodeId),
-    }));
-    setPathwalkGraph(prevGraph => ({
-      ...prevGraph,
-      nodes: prevGraph.nodes.filter(n => n.id !== nodeId),
-    }));
   };
 
   const [imageElement, setImageElement] = useState<HTMLImageElement | undefined>(undefined);
@@ -510,8 +459,7 @@ const App: React.FC = () => {
     return null;
   };
 
-  const selectedEdgeType = selectedEdgeId != null ? (roadGraph.edges.some(e => e.id === selectedEdgeId) ? 'road' : 'pathwalk') : null;
-  const selectedEdge = selectedEdgeId != null ? (roadGraph.edges.find(e => e.id === selectedEdgeId) || pathwalkGraph.edges.find(e => e.id === selectedEdgeId)) : null;
+  const selectedEdge = selectedEdgeId != null ? graph.edges.find(e => e.id === selectedEdgeId) : null
   return (
     <div className="app">
       <div 
@@ -534,23 +482,21 @@ const App: React.FC = () => {
             <Group>
               {/* <Img image={imageElement} /> */}
               {renderPreviewPoint()}
-              {pathwalkGraph.edges.map(edge => (
+              {graph.edges.filter(e => e.type === 'pathwalk').map(edge => (
                 <GraphEdgeComponent
                   key={edge.id}
                   edge={edge}
-                  nodes={pathwalkGraph.nodes}
-                  isPathwalk={true}
+                  nodes={graph.nodes}
                   isSelected={selectedEdgeId === edge.id}
                   isHovered={hoveredEdgeId === edge.id}
                   onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
                 />
               ))}
-              {roadGraph.edges.map(edge => (
+              {graph.edges.filter(e => e.type === 'road').map(edge => (
                 <GraphEdgeComponent
                   key={edge.id}
                   edge={edge}
-                  nodes={roadGraph.nodes}
-                  isPathwalk={false}
+                  nodes={graph.nodes}
                   isSelected={selectedEdgeId === edge.id}
                   isHovered={hoveredEdgeId === edge.id}
                   onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
@@ -605,7 +551,7 @@ const App: React.FC = () => {
                   isPathwalk={tool === 'pathwalk'}
                 />
               )}
-              {[...pathwalkGraph.nodes, ...roadGraph.nodes].map(node => (
+              {graph.nodes.map(node => (
                 <GraphNodeComponent
                   key={node.id}
                   node={node}
@@ -668,29 +614,29 @@ const App: React.FC = () => {
           onSelectPolygon={handleSelectPolygon}
         />
       )}
-      {selectedEdgeId != null && selectedEdgeType === 'road' && (
+      {selectedEdge?.type === 'road' && (
         <EdgesList
-          edges={roadGraph.edges}
+          edges={graph.edges.filter(e => e.type === 'road')}
           selectedEdgeId={selectedEdgeId}
           onSelectEdge={handleSelectEdge}
           title="Road Edges"
           className="road-edges-list"
         />
       )}
-      {selectedEdgeId != null && selectedEdgeType === 'pathwalk' && (
+      {selectedEdgeId != null && selectedEdge?.type === 'pathwalk' && (
         <EdgesList
-          edges={pathwalkGraph.edges}
+          edges={graph.edges.filter(e => e.type === 'pathwalk')}
           selectedEdgeId={selectedEdgeId}
           onSelectEdge={handleSelectEdge}
           title="Pathwalk Edges"
           className="pathwalk-edges-list"
         />
       )}
-      {selectedEdge?.width != null && (
+      {selectedEdge?.type === 'road' && (
         <EdgePropertiesPanel
           edgeWidth={selectedEdge.width}
           onEdgeWidthChange={(newWidth) => {
-            setRoadGraph(prevGraph => ({
+            setGraph(prevGraph => ({
               ...prevGraph,
               edges: prevGraph.edges.map(e => e.id === selectedEdgeId ? { ...e, width: newWidth } : e),
             }));
@@ -740,4 +686,37 @@ function getAllPolygonPoints(polygons: Polygon[], excludePolygonIndex: number | 
 
 function getAllGraphPoints(nodes: GraphNode[], excludeNodeId: string | null = null): number[][] {
   return nodes.filter(node => node.id !== excludeNodeId).map(node => [node.x, node.y]);
+};
+
+function addNode(graph: Graph, newNode: GraphNode): Graph {
+  return {
+    ...graph,
+    nodes: [...graph.nodes, { ...newNode, edges: [] }],
+  };
+};
+
+function addEdge(graph: Graph, newEdge: GraphEdge): Graph {
+  const updatedNodes = graph.nodes.map(node => {
+    if (node.id === newEdge.from || node.id === newEdge.to) {
+      return { ...node, edges: [...node.edges, newEdge.id] };
+    }
+    return node;
+  });
+
+  return {
+    nodes: updatedNodes,
+    edges: [...graph.edges, newEdge],
+  };
+};
+
+const removeEdge = (graph: Graph, edgeId: string): Graph => {
+  const updatedNodes = graph.nodes.map(node => ({
+    ...node,
+    edges: node.edges.filter(id => id !== edgeId),
+  }));
+
+  return {
+    nodes: updatedNodes.filter(node => node.edges.length > 0),
+    edges: graph.edges.filter(edge => edge.id !== edgeId),
+  };
 };

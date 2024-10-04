@@ -4,14 +4,14 @@ export type GraphNode = {
   id: string;
   x: number;
   y: number;
-};
+  edges: string[]; // Array of incident edge IDs
+}
 
 export type GraphEdge = {
   id: string;
   from: string;
   to: string;
-  width?: number; // Only for road edges
-};
+} & ({ type: 'road', width: number } | { type: 'pathwalk' });
 
 export type Graph = {
   nodes: GraphNode[];
