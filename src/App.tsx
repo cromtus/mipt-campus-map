@@ -15,6 +15,7 @@ import EdgesList from './components/EdgesList';
 import EdgePropertiesPanel from './components/EdgePropertiesPanel';
 import PreviewEdge from './components/PreviewEdge';
 import PreviewPoint from './components/PreviewPoint';
+import TwoDegreeNodes from './components/TwoDegreeNodes';
 
 type Polygon = {
   points: number[][];
@@ -214,29 +215,30 @@ const App: React.FC = () => {
         edges: [],
       };
 
-      const existingNode = graph.nodes.find(node => 
-        Math.abs(node.x - newNode.x) < 10 && Math.abs(node.y - newNode.y) < 10
-      );
+      const hoveredNode = graph.nodes.find(node => node.id === hoveredNodeId)
+      const nextNode = hoveredNode ?? newNode
 
-      if (!existingNode) {
-        setGraph(prevGraph => addNode(prevGraph, newNode));
-      }
-
-      if (lastClickedNode && isDrawingEdge) {
-        const newEdge: GraphEdge = {
-          id: Date.now().toString(),
-          from: lastClickedNode.id,
-          to: existingNode ? existingNode.id : newNode.id,
-          ...(tool === 'road' ? { type: 'road', width: 10 } : { type: 'pathwalk' }),
-        };
-
-        setGraph(prevGraph => addEdge(prevGraph, newEdge));
-      }
+      setGraph(prevGraph => {
+        if (nextNode.id === newNode.id) {
+          prevGraph = addNode(prevGraph, newNode)
+        }
+        if (lastClickedNode && isDrawingEdge) {
+          const newEdge: GraphEdge = {
+            id: Date.now().toString(),
+            from: lastClickedNode.id,
+            to: nextNode.id,
+            ...(tool === 'road' ? { type: 'road', width: 10 } : { type: 'pathwalk' }),
+          };
+          return addEdge(prevGraph, newEdge)
+        } else {
+          return prevGraph
+        }
+      })
       setPreviewEdge({
-        from: existingNode || newNode,
-        to: { x: newNode.x, y: newNode.y },
+        from: nextNode,
+        to: { x: nextNode.x, y: nextNode.y },
       });
-      setLastClickedNode(existingNode || newNode);
+      setLastClickedNode(nextNode);
       setIsDrawingEdge(true);
     }
   };
@@ -480,7 +482,7 @@ const App: React.FC = () => {
         >
           <Layer>
             <Group>
-              {/* <Img image={imageElement} /> */}
+              {/* <Img image={imageElement} opacity={0.5} /> */}
               {renderPreviewPoint()}
               {graph.edges.filter(e => e.type === 'pathwalk').map(edge => (
                 <GraphEdgeComponent
@@ -502,6 +504,7 @@ const App: React.FC = () => {
                   onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
                 />
               ))}
+              <TwoDegreeNodes nodes={graph.nodes} edges={graph.edges} />
               <Text text="Первомайская улица" x={300} y={620} fontSize={20} fill="rgba(0, 0, 0, 0.2)" />
               <Text text="Институтский переулок" x={979} y={280} fontSize={20} fill="rgba(0, 0, 0, 0.2)" rotationDeg={90}/>
               {polygons.sort(polygonsCompareFn(centerDot)).map((poly, index) => {
@@ -584,10 +587,10 @@ const App: React.FC = () => {
               draggable
               onDragMove={handleDotDrag}
             >
-              <Line points={[0, 0, -10, 10, 10, 10]} fill="red" closed={true} />
-              <Rect x={-10} y={-1} width={20} height={1} fill="red" />
-              <Text text="Вы здесь" x={13} y={-2} fontSize={10} fill="red" />
-              <Text text="You are here" x={13} y={8} fontSize={7} fill="red" />
+              <Line points={[0, 0, -5, 5, 5, 5]} fill="red" closed={true} />
+              <Rect x={-5} y={-1} width={10} height={1} fill="red" />
+              <Text text="Вы здесь" x={8} y={-2} fontSize={10} fill="red" />
+              <Text text="You are here" x={8} y={8} fontSize={7} fill="red" />
             </Group>
           </Layer>
         </Stage>

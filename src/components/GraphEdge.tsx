@@ -17,7 +17,7 @@ const GraphEdge: React.FC<GraphEdgeProps> = ({ edge, nodes, isSelected, isHovere
   if (!fromNode || !toNode) return null;
 
   const stroke = edge.type === 'pathwalk' ? (
-    isHovered || isSelected ? 'black' : 'rgba(0, 150, 0, 0.3)'
+    isHovered || isSelected ? 'black' : 'rgba(0, 150, 0, 0.7)'
    ) : (
     isHovered || isSelected ? 'gray' : 'white'
    );
