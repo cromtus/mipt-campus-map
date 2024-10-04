@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Stage, Layer, Group, Circle, Image as Img, Line } from 'react-konva';
+import { Stage, Layer, Group, Image as Img, Line, Rect, Text } from 'react-konva';
 import { useGesture } from '@use-gesture/react';
 import ToolPanel from './components/ToolPanel';
 import Polygon from './components/Polygon';
@@ -50,8 +50,14 @@ const App: React.FC = () => {
     snapped: { x: number; y: number };
     snapLines: { from: { x: number; y: number }, to: { x: number; y: number } }[];
   } | null>(null);
-  const [pathwalkGraph, setPathwalkGraph] = useState<Graph>({ nodes: [], edges: [] });
-  const [roadGraph, setRoadGraph] = useState<Graph>({ nodes: [], edges: [] });
+  const [pathwalkGraph, setPathwalkGraph] = useState<Graph>(() => {
+    const savedPathwalkGraph = localStorage.getItem('pathwalkGraph');
+    return savedPathwalkGraph ? JSON.parse(savedPathwalkGraph) : { nodes: [], edges: [] };
+  });
+  const [roadGraph, setRoadGraph] = useState<Graph>(() => {
+    const savedRoadGraph = localStorage.getItem('roadGraph');
+    return savedRoadGraph ? JSON.parse(savedRoadGraph) : { nodes: [], edges: [] };
+  });
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [lastClickedNode, setLastClickedNode] = useState<GraphNode | null>(null);
@@ -69,6 +75,14 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('centerDot', JSON.stringify(centerDot));
   }, [centerDot]);
+
+  useEffect(() => {
+    localStorage.setItem('pathwalkGraph', JSON.stringify(pathwalkGraph));
+  }, [pathwalkGraph]);
+  
+  useEffect(() => {
+    localStorage.setItem('roadGraph', JSON.stringify(roadGraph));
+  }, [roadGraph]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -335,6 +349,8 @@ const App: React.FC = () => {
         x: e.target.x(),
         y: e.target.y()
       });
+    } else {
+      e.target.position(centerDot)
     }
   };
 
@@ -540,6 +556,8 @@ const App: React.FC = () => {
                   onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
                 />
               ))}
+              <Text text="Первомайская улица" x={300} y={620} fontSize={20} fill="rgba(0, 0, 0, 0.2)" />
+              <Text text="Институтский переулок" x={979} y={280} fontSize={20} fill="rgba(0, 0, 0, 0.2)" rotationDeg={90}/>
               {polygons.sort(polygonsCompareFn(centerDot)).map((poly, index) => {
                 const polygon = (
                   <Polygon
@@ -614,14 +632,17 @@ const App: React.FC = () => {
                 />
               ))}
             </Group>
-            <Circle
+            <Group
               x={centerDot.x}
               y={centerDot.y}
-              radius={5}
-              fill="red"
               draggable
               onDragMove={handleDotDrag}
-            />
+            >
+              <Line points={[0, 0, -10, 10, 10, 10]} fill="red" closed={true} />
+              <Rect x={-10} y={-1} width={20} height={1} fill="red" />
+              <Text text="Вы здесь" x={13} y={-2} fontSize={10} fill="red" />
+              <Text text="You are here" x={13} y={8} fontSize={7} fill="red" />
+            </Group>
           </Layer>
         </Stage>
       </div>

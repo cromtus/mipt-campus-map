@@ -60,7 +60,7 @@ const Polygon: React.FC<PolygonProps> = ({
       };
     } else if (type === 'pavement') {
       return {
-        fill: 'rgba(245, 245, 224, 1)', // Light yellow
+        fill: 'rgb(245, 245, 224)', // Light yellow
       };
     } else {
       return {
