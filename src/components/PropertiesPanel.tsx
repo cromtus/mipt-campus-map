@@ -54,6 +54,44 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedPolygon, onPo
     }
   };
 
+  const addEntry = () => {
+    if (selectedPolygon && selectedPolygon.type === 'building') {
+      const newEntry = {
+        id: Date.now().toString(),
+        position: 0
+      };
+      const updatedPolygon = {
+        ...selectedPolygon,
+        entries: [...(selectedPolygon.entries || []), newEntry]
+      };
+      onPolygonChange(updatedPolygon);
+    }
+  };
+
+  const updateEntry = (id: string, position: number) => {
+    if (selectedPolygon && selectedPolygon.type === 'building') {
+      const updatedEntries = selectedPolygon.entries.map(entry =>
+        entry.id === id ? { ...entry, position } : entry
+      );
+      const updatedPolygon = {
+        ...selectedPolygon,
+        entries: updatedEntries
+      };
+      onPolygonChange(updatedPolygon);
+    }
+  };
+
+  const removeEntry = (id: string) => {
+    if (selectedPolygon && selectedPolygon.type === 'building') {
+      const updatedEntries = selectedPolygon.entries.filter(entry => entry.id !== id);
+      const updatedPolygon = {
+        ...selectedPolygon,
+        entries: updatedEntries
+      };
+      onPolygonChange(updatedPolygon);
+    }
+  };
+
   return (
     <div className="properties-panel">
       <h3>Building Properties</h3>
@@ -126,6 +164,26 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedPolygon, onPo
               Right
             </button>
           </div>
+        </>
+      )}
+      {selectedPolygon && selectedPolygon.type === 'building' && (
+        <>
+          <h3>Entries</h3>
+          <button onClick={addEntry}>Add Entry</button>
+          {selectedPolygon.entries && selectedPolygon.entries.map(entry => (
+            <div key={entry.id} className="entry-item">
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.001"
+                value={entry.position}
+                onChange={(e) => updateEntry(entry.id, parseFloat(e.target.value))}
+              />
+              <span>{entry.position.toFixed(2)}</span>
+              <button onClick={() => removeEntry(entry.id)}>Remove</button>
+            </div>
+          ))}
         </>
       )}
     </div>

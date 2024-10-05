@@ -1,7 +1,8 @@
 import React from 'react';
 import { Line } from 'react-konva';
 import DescriptionText from './DescriptionText';
-import { TextAlignment } from '../types';
+import { TextAlignment, Entry } from '../types';
+import EntryMarker from './EntryMarker';
 
 interface PrismProps {
   basePoints: number[][];
@@ -18,6 +19,7 @@ interface PrismProps {
     offsetY: number;
     alignment: TextAlignment;
   };
+  entries: Entry[];
   handleDescriptionDrag: (newOffset: { offsetX: number; offsetY: number }) => void;
 }
 
@@ -31,7 +33,8 @@ const Prism: React.FC<PrismProps> = ({
   stageX, 
   stageY,
   description,
-  handleDescriptionDrag
+  handleDescriptionDrag,
+  entries
 }) => {
   basePoints = expandBasePoints(basePoints);
 
@@ -111,6 +114,13 @@ const Prism: React.FC<PrismProps> = ({
           onDragMove={handleDescriptionDrag}
         />
       )}
+      {entries && entries.map(entry => (
+        <EntryMarker
+          key={entry.id}
+          points={baseProjected}
+          entry={entry.position}
+        />
+      ))}
     </>
   );
 };

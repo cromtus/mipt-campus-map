@@ -17,6 +17,7 @@ import PreviewEdge from './components/PreviewEdge';
 import PreviewPoint from './components/PreviewPoint';
 import TwoDegreeNodes from './components/TwoDegreeNodes';
 import { Barriers } from './components/Barriers';
+import EntryMarker from './components/EntryMarker';
 
 const prismHeight = 100;
 
@@ -312,7 +313,8 @@ const App: React.FC = () => {
             points: currentPolygon, 
             type: 'building', 
             height: prismHeight, 
-            color: '#000000'
+            color: '#000000',
+            entries: [],
           };
           break;
         case 'pavement':
@@ -514,6 +516,7 @@ const App: React.FC = () => {
                     canvasHeight={window.innerHeight}
                     stageX={centerDot.x}
                     stageY={centerDot.y}
+                    entries={poly.entries}
                   />
                 ) : null
                 return (
@@ -589,13 +592,13 @@ const App: React.FC = () => {
           )}
         </>
       )}
-      {selectedPolygonIndex != null && (
+      {/* {selectedPolygonIndex != null && (
         <LayersPanel 
           polygons={polygons}
           selectedPolygonIndex={selectedPolygonIndex}
           onSelectPolygon={handleSelectPolygon}
         />
-      )}
+      )} */}
       {selectedEdge?.type === 'road' && (
         <EdgesList
           edges={graph.edges.filter(e => e.type === 'road')}
@@ -605,7 +608,7 @@ const App: React.FC = () => {
           className="road-edges-list"
         />
       )}
-      {selectedEdge?.type === 'pathwalk' && (
+      {/* {selectedEdge?.type === 'pathwalk' && (
         <EdgesList
           edges={graph.edges.filter(e => e.type === 'pathwalk')}
           selectedEdgeId={selectedEdgeId}
@@ -613,7 +616,7 @@ const App: React.FC = () => {
           title="Pathwalk Edges"
           className="pathwalk-edges-list"
         />
-      )}
+      )} */}
       {selectedEdge?.type === 'road' && (
         <EdgePropertiesPanel
           edgeWidth={selectedEdge.width}

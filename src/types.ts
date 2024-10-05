@@ -2,6 +2,11 @@ export type Tool = 'pan' | 'select' | 'building' | 'pavement' | 'pathwalk' | 'ro
 
 export type TextAlignment = 'left' | 'center' | 'right';
 
+export type Entry = {
+  id: string;
+  position: number; // Value between 0 and 1
+};
+
 export type Polygon = {
   points: number[][];
 } & (
@@ -16,6 +21,7 @@ export type Polygon = {
         offsetY: number;
         alignment: TextAlignment;
       };
+      entries: Entry[];
     }
   | { type: 'pavement' }
 )
