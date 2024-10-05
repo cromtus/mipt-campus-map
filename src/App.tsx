@@ -17,7 +17,6 @@ import PreviewEdge from './components/PreviewEdge';
 import PreviewPoint from './components/PreviewPoint';
 import TwoDegreeNodes from './components/TwoDegreeNodes';
 import { Barriers } from './components/Barriers';
-import DescriptionText from './components/DescriptionText';
 
 const prismHeight = 100;
 
@@ -364,54 +363,6 @@ const App: React.FC = () => {
     img.onload = () => setImageElement(img);
   }, []);
 
-  const handleHeightChange = (newHeight: number) => {
-    if (selectedPolygonIndex !== null) {
-      setPolygons(prevPolygons => {
-        const updatedPolygons = [...prevPolygons];
-        let newPolygon = updatedPolygons[selectedPolygonIndex]
-        if (newPolygon.type === 'building') {
-          updatedPolygons[selectedPolygonIndex] = {
-            ...newPolygon,
-            height: newHeight
-          };
-        }
-        return updatedPolygons;
-      });
-    }
-  };
-
-  const handleColorChange = (newColor: string) => {
-    if (selectedPolygonIndex !== null) {
-      setPolygons(prevPolygons => {
-        const updatedPolygons = [...prevPolygons];
-        let newPolygon = updatedPolygons[selectedPolygonIndex]
-        if (newPolygon.type === 'building') {
-          updatedPolygons[selectedPolygonIndex] = {
-            ...newPolygon,
-            color: newColor
-          };
-        }
-        return updatedPolygons;
-      });
-    }
-  };
-
-  const handleSecondaryColorChange = (newColor: string | undefined) => {
-    if (selectedPolygonIndex !== null) {
-      setPolygons(prevPolygons => {
-        const updatedPolygons = [...prevPolygons];
-        let newPolygon = updatedPolygons[selectedPolygonIndex]
-        if (newPolygon.type === 'building') {
-          updatedPolygons[selectedPolygonIndex] = {
-            ...newPolygon,
-            secondaryColor: newColor
-          };
-        }
-        return updatedPolygons;
-      });
-    }
-  };
-
   const handlePolygonChange = (updatedPolygon: Polygon) => {
     if (selectedPolygonIndex !== null) {
       setPolygons(prevPolygons => {
@@ -422,21 +373,18 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDescriptionDrag = (newPos: { x: number; y: number }) => {
-    if (selectedPolygonIndex !== null) {
-      setPolygons(prevPolygons => {
-        const newPolygons = [...prevPolygons];
-        const selectedPolygon = newPolygons[selectedPolygonIndex];
-        if (selectedPolygon.type === 'building' && selectedPolygon.description) {
-          selectedPolygon.description = {
-            ...selectedPolygon.description,
-            x: newPos.x,
-            y: newPos.y,
-          };
-        }
-        return newPolygons;
-      });
-    }
+  const handleDescriptionDrag = (polygonIndex: number, newOffset: { offsetX: number; offsetY: number }) => {
+    setPolygons(prevPolygons => {
+      const newPolygons = [...prevPolygons];
+      const selectedPolygon = newPolygons[polygonIndex];
+      if (selectedPolygon.type === 'building' && selectedPolygon.description) {
+        selectedPolygon.description = {
+          ...selectedPolygon.description,
+          ...newOffset
+        };
+      }
+      return newPolygons;
+    });
   };
 
   const handleSelectPolygon = (index: number) => {
@@ -560,6 +508,8 @@ const App: React.FC = () => {
                     height={poly.height}
                     color={poly.color}
                     secondaryColor={poly.secondaryColor}
+                    description={poly.description}
+                    handleDescriptionDrag={(newOffset) => handleDescriptionDrag(index, newOffset)}
                     canvasWidth={window.innerWidth}
                     canvasHeight={window.innerHeight}
                     stageX={centerDot.x}
@@ -570,13 +520,6 @@ const App: React.FC = () => {
                   <React.Fragment key={index}>
                     {selectedPolygonIndex === index ? prism : polygon}
                     {selectedPolygonIndex === index ? polygon : prism}
-                    {poly.type === 'building' && poly.description && (
-                      <DescriptionText
-                        description={poly.description}
-                        isSelected={selectedPolygonIndex === index}
-                        onDragMove={handleDescriptionDrag}
-                      />
-                    )}
                   </React.Fragment>
                 )
               })}

@@ -1,5 +1,7 @@
 import React from 'react';
 import { Line } from 'react-konva';
+import DescriptionText from './DescriptionText';
+import { TextAlignment } from '../types';
 
 interface PrismProps {
   basePoints: number[][];
@@ -10,6 +12,13 @@ interface PrismProps {
   canvasHeight: number;
   stageX: number;
   stageY: number;
+  description?: {
+    text: string;
+    offsetX: number;
+    offsetY: number;
+    alignment: TextAlignment;
+  };
+  handleDescriptionDrag: (newOffset: { offsetX: number; offsetY: number }) => void;
 }
 
 const Prism: React.FC<PrismProps> = ({ 
@@ -20,7 +29,9 @@ const Prism: React.FC<PrismProps> = ({
   canvasWidth, 
   canvasHeight, 
   stageX, 
-  stageY 
+  stageY,
+  description,
+  handleDescriptionDrag
 }) => {
   basePoints = expandBasePoints(basePoints);
 
@@ -92,6 +103,14 @@ const Prism: React.FC<PrismProps> = ({
         stroke={color}
         strokeWidth={strokeWidth}
       />
+      {description && (
+        <DescriptionText
+          description={description}
+          centerX={topProjected.reduce((sum, point) => sum + point[0], 0) / topProjected.length}
+          centerY={topProjected.reduce((sum, point) => sum + point[1], 0) / topProjected.length}
+          onDragMove={handleDescriptionDrag}
+        />
+      )}
     </>
   );
 };

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './PropertiesPanel.css';
-import type { Polygon } from '../types';
-
+import type { Polygon, TextAlignment } from '../types';
 
 interface PropertiesPanelProps {
   selectedPolygon: Polygon | null;
@@ -22,24 +21,20 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedPolygon, onPo
   if (!selectedPolygon || selectedPolygon.type !== 'building') return null;
 
   const handleDescriptionChange = (text: string) => {
-    const updatedPolygon = {
+    const updatedPolygon: Polygon = {
       ...selectedPolygon,
       description: selectedPolygon.description 
         ? { ...selectedPolygon.description, text } 
-        : { text, x: 0, y: 0 } // Default coordinates
+        : { text, offsetX: 0, offsetY: 0, alignment: 'center' } // Default coordinates
     };
     onPolygonChange(updatedPolygon);
   };
 
   const toggleDescription = () => {
     if (!showDescription) {
-      // Calculate center of the polygon
-      const centerX = selectedPolygon.points.reduce((sum, point) => sum + point[0], 0) / selectedPolygon.points.length;
-      const centerY = selectedPolygon.points.reduce((sum, point) => sum + point[1], 0) / selectedPolygon.points.length;
-      
-      const updatedPolygon = {
+      const updatedPolygon: Polygon = {
         ...selectedPolygon,
-        description: { text: '', x: centerX, y: centerY }
+        description: { text: '', offsetX: 0, offsetY: 0, alignment: 'center' }
       };
       onPolygonChange(updatedPolygon);
     } else {
@@ -47,6 +42,16 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedPolygon, onPo
       onPolygonChange(rest as Polygon);
     }
     setShowDescription(!showDescription);
+  };
+
+  const handleAlignmentChange = (alignment: TextAlignment) => {
+    if (selectedPolygon.type === 'building' && selectedPolygon.description) {
+      const updatedPolygon = {
+        ...selectedPolygon,
+        description: { ...selectedPolygon.description, alignment }
+      };
+      onPolygonChange(updatedPolygon);
+    }
   };
 
   return (
@@ -94,12 +99,34 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedPolygon, onPo
         />
         Show Description
       </label>
-      {showDescription && (
-        <textarea
-          value={selectedPolygon.description?.text || ''}
-          onChange={(e) => handleDescriptionChange(e.target.value)}
-          placeholder="Enter description..."
-        />
+      {showDescription && selectedPolygon.type === 'building' && selectedPolygon.description && (
+        <>
+          <textarea
+            value={selectedPolygon.description.text}
+            onChange={(e) => handleDescriptionChange(e.target.value)}
+            placeholder="Enter description..."
+          />
+          <div className="alignment-buttons">
+            <button
+              onClick={() => handleAlignmentChange('left')}
+              className={selectedPolygon.description.alignment === 'left' ? 'active' : ''}
+            >
+              Left
+            </button>
+            <button
+              onClick={() => handleAlignmentChange('center')}
+              className={selectedPolygon.description.alignment === 'center' ? 'active' : ''}
+            >
+              Center
+            </button>
+            <button
+              onClick={() => handleAlignmentChange('right')}
+              className={selectedPolygon.description.alignment === 'right' ? 'active' : ''}
+            >
+              Right
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

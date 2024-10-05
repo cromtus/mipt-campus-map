@@ -1,5 +1,7 @@
 export type Tool = 'pan' | 'select' | 'building' | 'pavement' | 'pathwalk' | 'road' | 'fence';
 
+export type TextAlignment = 'left' | 'center' | 'right';
+
 export type Polygon = {
   points: number[][];
 } & (
@@ -10,8 +12,9 @@ export type Polygon = {
       secondaryColor?: string;
       description?: {
         text: string;
-        x: number;
-        y: number;
+        offsetX: number;
+        offsetY: number;
+        alignment: TextAlignment;
       };
     }
   | { type: 'pavement' }
