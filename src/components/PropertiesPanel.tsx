@@ -1,50 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import './PropertiesPanel.css';
+import type { Polygon } from '../types';
+
 
 interface PropertiesPanelProps {
-  height: number;
-  color: string;
-  secondaryColor?: string;
-  onHeightChange: (newHeight: number) => void;
-  onColorChange: (newColor: string) => void;
-  onSecondaryColorChange: (newColor: string | undefined) => void;
-  edgeWidth?: number;
-  onEdgeWidthChange?: (width: number) => void;
+  selectedPolygon: Polygon | null;
+  onPolygonChange: (updatedPolygon: Polygon) => void;
 }
 
-const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ 
-  height, 
-  color, 
-  secondaryColor, 
-  onHeightChange, 
-  onColorChange, 
-  onSecondaryColorChange, 
-  edgeWidth, 
-  onEdgeWidthChange 
-}) => {
-  const [useSecondaryColor, setUseSecondaryColor] = useState(!!secondaryColor);
-  const [localSecondaryColor, setLocalSecondaryColor] = useState(secondaryColor || '#FFFFFF');
+const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedPolygon, onPolygonChange }) => {
   const [showDescription, setShowDescription] = useState(false);
 
   useEffect(() => {
-    setUseSecondaryColor(!!secondaryColor);
-    setLocalSecondaryColor(secondaryColor || '#FFFFFF');
-  }, [secondaryColor]);
-
-  const handleSecondaryColorChange = (newColor: string) => {
-    setLocalSecondaryColor(newColor);
-    if (useSecondaryColor) {
-      onSecondaryColorChange(newColor);
+    if (selectedPolygon && selectedPolygon.type === 'building') {
+      setShowDescription(!!selectedPolygon.description);
+    } else {
+      setShowDescription(false);
     }
+  }, [selectedPolygon]);
+
+  if (!selectedPolygon || selectedPolygon.type !== 'building') return null;
+
+  const handleDescriptionChange = (text: string) => {
+    const updatedPolygon = {
+      ...selectedPolygon,
+      description: selectedPolygon.description 
+        ? { ...selectedPolygon.description, text } 
+        : { text, x: 0, y: 0 } // Default coordinates
+    };
+    onPolygonChange(updatedPolygon);
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUseSecondaryColor(e.target.checked);
-    if (e.target.checked) {
-      onSecondaryColorChange(localSecondaryColor);
+  const toggleDescription = () => {
+    if (!showDescription) {
+      // Calculate center of the polygon
+      const centerX = selectedPolygon.points.reduce((sum, point) => sum + point[0], 0) / selectedPolygon.points.length;
+      const centerY = selectedPolygon.points.reduce((sum, point) => sum + point[1], 0) / selectedPolygon.points.length;
+      
+      const updatedPolygon = {
+        ...selectedPolygon,
+        description: { text: '', x: centerX, y: centerY }
+      };
+      onPolygonChange(updatedPolygon);
     } else {
-      onSecondaryColorChange(undefined);
+      const { description, ...rest } = selectedPolygon;
+      onPolygonChange(rest as Polygon);
     }
+    setShowDescription(!showDescription);
   };
 
   return (
@@ -54,47 +56,50 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
         Height:
         <input
           type="number"
-          value={height}
-          onChange={(e) => onHeightChange(Number(e.target.value))}
-          min="1"
+          value={selectedPolygon.height}
+          onChange={(e) => onPolygonChange({ ...selectedPolygon, height: Number(e.target.value) })}
         />
       </label>
       <label>
         Primary Color:
         <input
           type="color"
-          value={color}
-          onChange={(e) => onColorChange(e.target.value)}
+          value={selectedPolygon.color}
+          onChange={(e) => onPolygonChange({ ...selectedPolygon, color: e.target.value })}
         />
       </label>
       <label>
         <input
           type="checkbox"
-          checked={useSecondaryColor}
-          onChange={handleCheckboxChange}
+          checked={selectedPolygon.secondaryColor != null}
+          onChange={(e) => onPolygonChange({ ...selectedPolygon, secondaryColor: e.target.checked ? '#000000' : undefined })}
         />
         Use Secondary Color
       </label>
-      {useSecondaryColor && (
+      {selectedPolygon.secondaryColor && (
         <label>
           Secondary Color:
           <input
             type="color"
-            value={localSecondaryColor}
-            onChange={(e) => handleSecondaryColorChange(e.target.value)}
+            value={selectedPolygon.secondaryColor}
+            onChange={(e) => onPolygonChange({ ...selectedPolygon, secondaryColor: e.target.value })}
           />
         </label>
       )}
-      {edgeWidth !== undefined && onEdgeWidthChange && (
-        <label>
-          Edge Width:
-          <input
-            type="number"
-            value={edgeWidth}
-            onChange={(e) => onEdgeWidthChange(Number(e.target.value))}
-            min="1"
-          />
-        </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={showDescription}
+          onChange={toggleDescription}
+        />
+        Show Description
+      </label>
+      {showDescription && (
+        <textarea
+          value={selectedPolygon.description?.text || ''}
+          onChange={(e) => handleDescriptionChange(e.target.value)}
+          placeholder="Enter description..."
+        />
       )}
     </div>
   );

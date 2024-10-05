@@ -17,6 +17,7 @@ import PreviewEdge from './components/PreviewEdge';
 import PreviewPoint from './components/PreviewPoint';
 import TwoDegreeNodes from './components/TwoDegreeNodes';
 import { Barriers } from './components/Barriers';
+import DescriptionText from './components/DescriptionText';
 
 const prismHeight = 100;
 
@@ -411,6 +412,33 @@ const App: React.FC = () => {
     }
   };
 
+  const handlePolygonChange = (updatedPolygon: Polygon) => {
+    if (selectedPolygonIndex !== null) {
+      setPolygons(prevPolygons => {
+        const newPolygons = [...prevPolygons];
+        newPolygons[selectedPolygonIndex] = updatedPolygon;
+        return newPolygons;
+      });
+    }
+  };
+
+  const handleDescriptionDrag = (newPos: { x: number; y: number }) => {
+    if (selectedPolygonIndex !== null) {
+      setPolygons(prevPolygons => {
+        const newPolygons = [...prevPolygons];
+        const selectedPolygon = newPolygons[selectedPolygonIndex];
+        if (selectedPolygon.type === 'building' && selectedPolygon.description) {
+          selectedPolygon.description = {
+            ...selectedPolygon.description,
+            x: newPos.x,
+            y: newPos.y,
+          };
+        }
+        return newPolygons;
+      });
+    }
+  };
+
   const handleSelectPolygon = (index: number) => {
     setTool('select');
     setSelectedPolygonIndex(index);
@@ -542,6 +570,13 @@ const App: React.FC = () => {
                   <React.Fragment key={index}>
                     {selectedPolygonIndex === index ? prism : polygon}
                     {selectedPolygonIndex === index ? polygon : prism}
+                    {poly.type === 'building' && poly.description && (
+                      <DescriptionText
+                        description={poly.description}
+                        isSelected={selectedPolygonIndex === index}
+                        onDragMove={handleDescriptionDrag}
+                      />
+                    )}
                   </React.Fragment>
                 )
               })}
@@ -605,12 +640,8 @@ const App: React.FC = () => {
         <>
           {polygons[selectedPolygonIndex].type === 'building' && (
             <PropertiesPanel
-              height={polygons[selectedPolygonIndex].height}
-              color={polygons[selectedPolygonIndex].color}
-              secondaryColor={polygons[selectedPolygonIndex].secondaryColor}
-              onHeightChange={handleHeightChange}
-              onColorChange={handleColorChange}
-              onSecondaryColorChange={handleSecondaryColorChange}
+              selectedPolygon={polygons[selectedPolygonIndex]}
+              onPolygonChange={handlePolygonChange}
             />
           )}
         </>
