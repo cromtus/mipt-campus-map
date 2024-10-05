@@ -9,7 +9,8 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.3.0",
-    "react-konva": "^18.2.10"
+    "react-konva": "^18.2.10",
+    "react-konva-to-svg": "^1.0.2"
   },
   "devDependencies": {
     "@types/react-dom": "^18.3.0",

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Arrow } from 'react-konva';
+import React, { useMemo } from 'react';
+import { Arrow, Group, Line } from 'react-konva';
 
 interface EntryMarkerProps {
   points: number[][];
@@ -12,6 +12,10 @@ const EntryMarker: React.FC<EntryMarkerProps> = ({ points, entry }) => {
     return acc + Math.sqrt(
       Math.pow(nextPoint[0] - point[0], 2) + Math.pow(nextPoint[1] - point[1], 2)
     );
+  }, 0);
+  const orientedArea = points.reduce((acc, point, index) => {
+    const nextPoint = points[(index + 1) % points.length];
+    return acc + (point[0] * nextPoint[1] - nextPoint[0] * point[1]);
   }, 0);
 
   let currentLength = 0;
@@ -31,7 +35,7 @@ const EntryMarker: React.FC<EntryMarkerProps> = ({ points, entry }) => {
         point[0] + t * (nextPoint[0] - point[0]),
         point[1] + t * (nextPoint[1] - point[1])
       ];
-      markerAngle = Math.atan2(nextPoint[1] - point[1], nextPoint[0] - point[0]) - Math.PI / 2;
+      markerAngle = Math.atan2(nextPoint[1] - point[1], nextPoint[0] - point[0]) - Math.PI / 2 * Math.sign(orientedArea);
       break;
     }
 
@@ -40,23 +44,24 @@ const EntryMarker: React.FC<EntryMarkerProps> = ({ points, entry }) => {
 
   if (!markerPosition) return null;
 
-  const arrowLength = 10;
-  const arrowAngle = Math.PI / 6;
+  const size = 4;
+  const markerPoints = useMemo(() => [
+    0, 0,
+    size, -size,
+    size + size / 2, -size + size / 2,
+    size, 0,
+    size + size / 2, size - size / 2,
+    size, size
+  ], [size]);
 
   return (
-    <Arrow
-      points={[
-        markerPosition[0] + arrowLength * Math.cos(markerAngle + Math.PI),
-        markerPosition[1] + arrowLength * Math.sin(markerAngle + Math.PI),
-        markerPosition[0],
-        markerPosition[1]
-      ]}
-      pointerLength={5}
-      pointerWidth={5}
-      fill="gray"
-      stroke="gray"
-      strokeWidth={2}
-    />
+    <Group
+      x={markerPosition[0]}
+      y={markerPosition[1]}
+      rotation={markerAngle * 180 / Math.PI}
+    >
+      <Line points={markerPoints} fill="rgb(128, 128, 128)" closed />
+    </Group>
   );
 };
 

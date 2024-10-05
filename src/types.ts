@@ -1,4 +1,4 @@
-export type Tool = 'pan' | 'select' | 'building' | 'pavement' | 'pathwalk' | 'road' | 'fence';
+export type Tool = 'pan' | 'select' | 'building' | 'pavement' | 'pathwalk' | 'road' | 'fence' | 'rect';
 
 export type TextAlignment = 'left' | 'center' | 'right';
 
@@ -42,4 +42,12 @@ export type GraphEdge = {
 export type Graph = {
   nodes: GraphNode[];
   edges: GraphEdge[];
+};
+
+export type Rect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  cornerRadius: number;
 };

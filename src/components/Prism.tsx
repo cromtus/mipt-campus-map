@@ -54,7 +54,7 @@ const Prism: React.FC<PrismProps> = ({
   const baseProjected = basePoints;
   const topProjected = basePoints.map(point => projectPoint(point[0], point[1], height));
 
-  const faceColor = 'rgba(255, 255, 255, 0.75)';
+  const faceColor = 'rgba(255, 255, 255, 0.5)';
 
   // Sort faces based on the average distance of their vertices to the stage center
   const sortedFaces = baseProjected

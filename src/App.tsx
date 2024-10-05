@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Stage, Layer, Group, Image as Img, Line, Rect, Text } from 'react-konva';
+import { Stage, Layer, Group, Image as Img, Line, Rect as Rectangle, Text } from 'react-konva';
 import { useGesture } from '@use-gesture/react';
 import ToolPanel from './components/ToolPanel';
 import PolygonComponent from './components/Polygon';
 import PreviewPolygon from './components/PreviewPolygon';
 import PropertiesPanel from './components/PropertiesPanel';
-import { Tool, Graph, GraphNode, GraphEdge, Polygon } from './types';
+import { Tool, Graph, GraphNode, GraphEdge, Polygon, Rect as RectType } from './types';
 import { snapPosition } from './utils/snapPosition';
 import Prism from './components/Prism';
 import LayersPanel from './components/LayersPanel';
@@ -18,15 +18,16 @@ import PreviewPoint from './components/PreviewPoint';
 import TwoDegreeNodes from './components/TwoDegreeNodes';
 import { Barriers } from './components/Barriers';
 import EntryMarker from './components/EntryMarker';
+import YouAreHere from './components/YouAreHere';
+import Rect from './components/Rect';
+import RectPropertiesPanel from './components/RectPropertiesPanel';
+import { useLocalStorage } from './hooks/useLocalStorage';
 
 const prismHeight = 100;
 
 const App: React.FC = () => {
   const [tool, setTool] = useState<Tool>('pan');
-  const [polygons, setPolygons] = useState<Polygon[]>(() => {
-    const savedPolygons = localStorage.getItem('polygons');
-    return savedPolygons ? JSON.parse(savedPolygons) : [];
-  });
+  const [polygons, setPolygons] = useLocalStorage<Polygon[]>('polygons', []);
   const [currentPolygon, setCurrentPolygon] = useState<number[][]>([]);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
@@ -35,21 +36,13 @@ const App: React.FC = () => {
   const [snappedMousePosition, setSnappedMousePosition] = useState<{ x: number; y: number } | null>(null);
   const [selectedPolygonIndex, setSelectedPolygonIndex] = useState<number | null>(null);
   const [hoveredPolygonIndex, setHoveredPolygonIndex] = useState<number | null>(null);
-  const [centerDot, setCenterDot] = useState(() => {
-    const savedCenterDot = localStorage.getItem('centerDot');
-    return savedCenterDot 
-      ? JSON.parse(savedCenterDot) 
-      : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-  });
+  const [centerDot, setCenterDot] = useLocalStorage<{ x: number; y: number }>('centerDot', { x: window.innerWidth / 2, y: window.innerHeight / 2 });
   const stageRef = useRef<any>(null);
   const [snappedInfo, setSnappedInfo] = useState<{
     snapped: { x: number; y: number };
     snapLines: { from: { x: number; y: number }, to: { x: number; y: number } }[];
   } | null>(null);
-  const [graph, setGraph] = useState<Graph>(() => {
-    const savedGraph = localStorage.getItem('graph');
-    return savedGraph ? JSON.parse(savedGraph) : { nodes: [], edges: [] };
-  });
+  const [graph, setGraph] = useLocalStorage<Graph>('graph', { nodes: [], edges: [] });
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [lastClickedNode, setLastClickedNode] = useState<GraphNode | null>(null);
@@ -60,17 +53,10 @@ const App: React.FC = () => {
   const [draggingPolygonNode, setDraggingPolygonNode] = useState<{ polygonIndex: number, nodeIndex: number } | null>(null);
   const [draggingGraphNode, setDraggingGraphNode] = useState<GraphNode | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('polygons', JSON.stringify(polygons));
-  }, [polygons]);
-
-  useEffect(() => {
-    localStorage.setItem('centerDot', JSON.stringify(centerDot));
-  }, [centerDot]);
-
-  useEffect(() => {
-    localStorage.setItem('graph', JSON.stringify(graph));
-  }, [graph]);
+  const [rects, setRects] = useLocalStorage<RectType[]>('rects', []);
+  const [selectedRectIndex, setSelectedRectIndex] = useState<number | null>(null);
+  const [hoveredRectIndex, setHoveredRectIndex] = useState<number | null>(null);
+  const [drawingRect, setDrawingRect] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -90,6 +76,7 @@ const App: React.FC = () => {
       if (e.key === 'Delete') {
         handleDeletePolygon();
         handleDeleteEdge();
+        handleDeleteRect();
       }
       if (e.key === 'c') {
         setIsDrawingEdge(false);
@@ -177,10 +164,12 @@ const App: React.FC = () => {
       const stage = stageRef.current;
       if (stage) {
         const point = stage.getPointerPosition();
-        setMousePosition({
-          x: (point.x - position.x) / scale,
-          y: (point.y - position.y) / scale,
-        });
+        if (point) {
+          setMousePosition({
+            x: (point.x - position.x) / scale,
+            y: (point.y - position.y) / scale,
+          });
+        }
       }
     },
   });
@@ -202,6 +191,7 @@ const App: React.FC = () => {
       setSelectedPolygonIndex(hoveredPolygonIndex);
       setSelectedEdgeId(hoveredEdgeId)
       setSelectedNodeId(hoveredNodeId)
+      setSelectedRectIndex(hoveredRectIndex);
     } else if (tool === 'pathwalk' || tool === 'road' || tool === 'fence') {
       const newNode: GraphNode = {
         id: Date.now().toString(),
@@ -357,6 +347,33 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteRect = () => {
+    if (selectedRectIndex !== null) {
+      setRects(prevRects => prevRects.filter((_, index) => index !== selectedRectIndex));
+      setSelectedRectIndex(null);
+    }
+  };
+
+  const handleStageMouseDown = (e: any) => {
+    if (tool === 'rect' && mousePosition) {
+      setDrawingRect({ ...mousePosition });
+    }
+  };
+
+
+  const handleStageMouseUp = () => {
+    if (tool === 'rect' && drawingRect && mousePosition) {
+      setDrawingRect(null);
+      setRects([...rects, {
+        x: drawingRect.x,
+        y: drawingRect.y,
+        width: mousePosition.x - drawingRect.x,
+        height: mousePosition.y - drawingRect.y,
+        cornerRadius: 0,
+      }])
+    }
+  };
+
   const [imageElement, setImageElement] = useState<HTMLImageElement | undefined>(undefined);
 
   useEffect(() => {
@@ -396,6 +413,10 @@ const App: React.FC = () => {
     setSelectedNodeId(null);
   };
 
+  const handleRectChange = (index: number, updatedRect: RectType) => {
+    setRects(rects.map((r, i) => i === index ? updatedRect : r));
+  };
+
   const handleSelectEdge = (edgeId: string | null) => {
     setSelectedEdgeId(edgeId);
     setSelectedPolygonIndex(null);
@@ -427,6 +448,7 @@ const App: React.FC = () => {
     setHoveredNodeId(null);
     setPreviewEdge(prev => prev ? { ...prev, to: prev.from } : null);
     setMousePosition(null);
+    setDrawingRect(null);
   };
 
   const renderPreviewPoint = () => {
@@ -460,6 +482,8 @@ const App: React.FC = () => {
           onClick={handleStageClick}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
+          onMouseDown={handleStageMouseDown}
+          onMouseUp={handleStageMouseUp}
           scaleX={scale}
           scaleY={scale}
           x={position.x}
@@ -490,6 +514,15 @@ const App: React.FC = () => {
               <TwoDegreeNodes nodes={graph.nodes} edges={graph.edges} />
               <Text text="Первомайская улица" x={300} y={620} fontSize={20} fill="rgba(0, 0, 0, 0.2)" />
               <Text text="Институтский переулок" x={979} y={280} fontSize={20} fill="rgba(0, 0, 0, 0.2)" rotationDeg={90}/>
+              {rects.map((rect, index) => (
+                <Rect
+                  key={index}
+                  rect={rect}
+                  isSelected={selectedRectIndex === index}
+                  onHoverUpdate={(hovered) => setHoveredRectIndex(hovered ? index : null)}
+                  onChange={(updatedRect) => handleRectChange(index, updatedRect)}
+                />
+              ))}
               {polygons.sort(polygonsCompareFn(centerDot)).map((poly, index) => {
                 const polygon = (
                   <PolygonComponent
@@ -540,6 +573,15 @@ const App: React.FC = () => {
                   kind={tool}
                 />
               )}
+              {drawingRect && mousePosition && (
+                <Rectangle
+                  x={drawingRect.x}
+                  y={drawingRect.y}
+                  width={mousePosition.x - drawingRect.x}
+                  height={mousePosition.y - drawingRect.y}
+                  fill="rgba(0, 0, 0, 0.2)"
+                />
+              )}
               {graph.nodes.map(node => (
                 <GraphNodeComponent
                   key={node.id}
@@ -567,17 +609,7 @@ const App: React.FC = () => {
                 />
               ))}
             </Group>
-            <Group
-              x={centerDot.x}
-              y={centerDot.y}
-              draggable
-              onDragMove={handleDotDrag}
-            >
-              <Line points={[0, 0, -5, 5, 5, 5]} fill="red" closed={true} />
-              <Rect x={-5} y={-1} width={10} height={1} fill="red" />
-              <Text text="Вы здесь" x={8} y={-2} fontSize={10} fill="red" />
-              <Text text="You are here" x={8} y={8} fontSize={7} fill="red" />
-            </Group>
+            <YouAreHere x={centerDot.x} y={centerDot.y} handleDotDrag={handleDotDrag} />
           </Layer>
         </Stage>
       </div>
@@ -626,6 +658,12 @@ const App: React.FC = () => {
               edges: prevGraph.edges.map(e => e.id === selectedEdgeId ? { ...e, width: newWidth } : e),
             }));
           }}
+        />
+      )}
+      {selectedRectIndex !== null && (
+        <RectPropertiesPanel
+          rect={rects[selectedRectIndex]}
+          onChange={(updatedRect) => handleRectChange(selectedRectIndex, updatedRect)}
         />
       )}
     </div>

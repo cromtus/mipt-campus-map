@@ -7,7 +7,7 @@ interface EdgePropertiesPanelProps {
 
 const EdgePropertiesPanel: React.FC<EdgePropertiesPanelProps> = ({ edgeWidth, onEdgeWidthChange }) => {
   return (
-    <div className="edge-properties-panel">
+    <div className="properties-panel">
       <h3>Edge Properties</h3>
       <label>
         Width:

@@ -51,6 +51,12 @@ const ToolPanel: React.FC<ToolPanelProps> = ({ activeTool, onToolChange }) => {
       >
         Fence
       </button>
+      <button
+        className={activeTool === 'rect' ? 'active' : ''}
+        onClick={() => onToolChange('rect')}
+      >
+        Sports
+      </button>
     </div>
   );
 };

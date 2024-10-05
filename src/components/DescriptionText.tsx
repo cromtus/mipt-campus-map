@@ -30,19 +30,16 @@ const DescriptionText: React.FC<DescriptionTextProps> = ({
         onDragMove({ offsetX: newOffsetX, offsetY: newOffsetY });
       }}
     >
-      <AlignedText
-        text={lines[0]}
-        alignment={alignment}
-        fontSize={24}
-        fontStyle="bold"
-        y={0}
-      />
-      <AlignedText
-        text={lines.slice(1).join('\n')}
-        alignment={alignment}
-        fontSize={12}
-        y={24}
-      />
+      {lines.map((line, index) => (
+        <AlignedText
+          key={index}
+          text={line}
+          alignment={alignment}
+          fontSize={index === 0 ? 24 : 12}
+          fontStyle={lines.length > 2 ? (index < 2 ? 'bold' : 'normal') : (index < 1 ? 'bold' : 'normal')}
+          y={index === 0 ? 0 : index * 12 + 12}
+        />
+      ))}
     </Group>
   );
 };

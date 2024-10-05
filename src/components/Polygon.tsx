@@ -54,11 +54,7 @@ const Polygon: React.FC<PolygonProps> = ({
   };
 
   const getColors = () => {
-    if (type === 'grass') {
-      return {
-        fill: isHovered && !isSelected ? 'rgba(0, 100, 0, 0.5)' : 'rgba(0, 100, 0, 0.1)',
-      };
-    } else if (type === 'pavement') {
+    if (type === 'pavement') {
       return {
         fill: 'rgb(245, 245, 224)', // Light yellow
       };
@@ -66,7 +62,7 @@ const Polygon: React.FC<PolygonProps> = ({
       return {
         stroke: isSelected ? "blue" : isHovered ? "black" : undefined,
         strokeWidth: isSelected || isHovered ? 3 : 0,
-        fill: isSelected ? "rgba(0, 0, 255, 0.1)" : isHovered ? "rgba(0, 255, 0, 0.1)" : "rgba(0, 0, 0, 0.1)"
+        fill: isSelected ? "rgba(0, 0, 255, 0.1)" : isHovered ? "rgba(0, 255, 0, 0.1)" : "rgba(255, 255, 255, 0.33)"
       };
     }
   };
