@@ -5,16 +5,16 @@ import { GraphNode } from '../types';
 interface PreviewEdgeProps {
   from: GraphNode;
   to: { x: number; y: number };
-  isPathwalk: boolean;
+  kind: 'pathwalk' | 'road' | 'fence';
 }
 
-const PreviewEdge: React.FC<PreviewEdgeProps> = ({ from, to, isPathwalk }) => {
+const PreviewEdge: React.FC<PreviewEdgeProps> = ({ from, to, kind }) => {
   return (
     <Line
       points={[from.x, from.y, to.x, to.y]}
-      stroke={isPathwalk ? 'green' : 'white'}
-      strokeWidth={isPathwalk ? 2 : 10}
-      dash={isPathwalk ? [5, 5] : undefined}
+      stroke={kind === 'pathwalk' ? 'green' : kind === 'road' ? 'white' : 'black'}
+      strokeWidth={kind === 'pathwalk' ? 2 : kind === 'road' ? 10 : 1}
+      dash={kind === 'pathwalk' ? [5, 5] : undefined}
       opacity={0.5}
     />
   );

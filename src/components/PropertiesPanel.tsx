@@ -24,6 +24,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 }) => {
   const [useSecondaryColor, setUseSecondaryColor] = useState(!!secondaryColor);
   const [localSecondaryColor, setLocalSecondaryColor] = useState(secondaryColor || '#FFFFFF');
+  const [showDescription, setShowDescription] = useState(false);
 
   useEffect(() => {
     setUseSecondaryColor(!!secondaryColor);

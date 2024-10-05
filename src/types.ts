@@ -1,4 +1,21 @@
-export type Tool = 'pan' | 'building' | 'select' | 'pavement' | 'pathwalk' | 'road';
+export type Tool = 'pan' | 'select' | 'building' | 'pavement' | 'pathwalk' | 'road' | 'fence';
+
+export type Polygon = {
+  points: number[][];
+} & (
+  | { 
+      type: 'building'; 
+      height: number; 
+      color: string; 
+      secondaryColor?: string;
+      description?: {
+        text: string;
+        x: number;
+        y: number;
+      };
+    }
+  | { type: 'pavement' }
+)
 
 export type GraphNode = {
   id: string;
@@ -11,7 +28,7 @@ export type GraphEdge = {
   id: string;
   from: string;
   to: string;
-} & ({ type: 'road', width: number } | { type: 'pathwalk' });
+} & ({ type: 'road', width: number } | { type: 'pathwalk' } | { type: 'fence' });
 
 export type Graph = {
   nodes: GraphNode[];

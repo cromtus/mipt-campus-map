@@ -1,11 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Stage, Layer, Group, Image as Img, Line, Rect, Text } from 'react-konva';
 import { useGesture } from '@use-gesture/react';
 import ToolPanel from './components/ToolPanel';
-import Polygon from './components/Polygon';
+import PolygonComponent from './components/Polygon';
 import PreviewPolygon from './components/PreviewPolygon';
 import PropertiesPanel from './components/PropertiesPanel';
-import { Tool, Graph, GraphNode, GraphEdge } from './types';
+import { Tool, Graph, GraphNode, GraphEdge, Polygon } from './types';
 import { snapPosition } from './utils/snapPosition';
 import Prism from './components/Prism';
 import LayersPanel from './components/LayersPanel';
@@ -16,13 +16,7 @@ import EdgePropertiesPanel from './components/EdgePropertiesPanel';
 import PreviewEdge from './components/PreviewEdge';
 import PreviewPoint from './components/PreviewPoint';
 import TwoDegreeNodes from './components/TwoDegreeNodes';
-
-type Polygon = {
-  points: number[][];
-} & (
-  | { type: 'building', height: number, color: string, secondaryColor?: string }
-  | { type: 'pavement' }
-)
+import { Barriers } from './components/Barriers';
 
 const prismHeight = 100;
 
@@ -119,7 +113,7 @@ const App: React.FC = () => {
       let allPoints: number[][] = []
       if (tool === 'building' || tool === 'pavement') {
         allPoints = getAllPolygonPoints(polygons).concat(currentPolygon);
-      } else if (tool === 'pathwalk' || tool === 'road') {
+      } else if (tool === 'pathwalk' || tool === 'road' || tool === 'fence') {
         allPoints = getAllGraphPoints(graph.nodes)
       } else {
         if (draggingPolygonNode) {
@@ -207,7 +201,7 @@ const App: React.FC = () => {
       setSelectedPolygonIndex(hoveredPolygonIndex);
       setSelectedEdgeId(hoveredEdgeId)
       setSelectedNodeId(hoveredNodeId)
-    } else if (tool === 'pathwalk' || tool === 'road') {
+    } else if (tool === 'pathwalk' || tool === 'road' || tool === 'fence') {
       const newNode: GraphNode = {
         id: Date.now().toString(),
         x: snappedMousePosition!.x,
@@ -227,7 +221,15 @@ const App: React.FC = () => {
             id: Date.now().toString(),
             from: lastClickedNode.id,
             to: nextNode.id,
-            ...(tool === 'road' ? { type: 'road', width: 10 } : { type: 'pathwalk' }),
+            ...(tool === 'road' ? (
+              { type: 'road', width: 10 }
+             ) : (
+              tool === 'fence' ? (
+                { type: 'fence' }
+               ) : (
+                { type: 'pathwalk' }
+              )
+            )),
           };
           return addEdge(prevGraph, newEdge)
         } else {
@@ -461,6 +463,11 @@ const App: React.FC = () => {
     return null;
   };
 
+  const nodeById = useMemo(() => graph.nodes.reduce((acc, node) => {
+    acc.set(node.id, node);
+    return acc;
+  }, new Map<string, GraphNode>()), [graph.nodes]);
+
   const selectedEdge = selectedEdgeId != null ? graph.edges.find(e => e.id === selectedEdgeId) : null
   return (
     <div className="app">
@@ -484,32 +491,30 @@ const App: React.FC = () => {
             <Group>
               {/* <Img image={imageElement} opacity={0.5} /> */}
               {renderPreviewPoint()}
-              {graph.edges.filter(e => e.type === 'pathwalk').map(edge => (
+              {graph.edges.sort((a, b) => {
+                if (a.type === 'road') return 1;
+                if (b.type === 'road') return -1;
+                if (a.type === 'pathwalk') return 1;
+                if (b.type === 'pathwalk') return -1;
+                return 0;
+              }).map(edge => (
                 <GraphEdgeComponent
                   key={edge.id}
                   edge={edge}
-                  nodes={graph.nodes}
+                  edges={graph.edges}
+                  nodes={nodeById}
                   isSelected={selectedEdgeId === edge.id}
                   isHovered={hoveredEdgeId === edge.id}
                   onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
                 />
               ))}
-              {graph.edges.filter(e => e.type === 'road').map(edge => (
-                <GraphEdgeComponent
-                  key={edge.id}
-                  edge={edge}
-                  nodes={graph.nodes}
-                  isSelected={selectedEdgeId === edge.id}
-                  isHovered={hoveredEdgeId === edge.id}
-                  onHover={(edgeId) => tool === 'select' && setHoveredEdgeId(edgeId)}
-                />
-              ))}
+              <Barriers edges={graph.edges} nodes={nodeById} />
               <TwoDegreeNodes nodes={graph.nodes} edges={graph.edges} />
               <Text text="Первомайская улица" x={300} y={620} fontSize={20} fill="rgba(0, 0, 0, 0.2)" />
               <Text text="Институтский переулок" x={979} y={280} fontSize={20} fill="rgba(0, 0, 0, 0.2)" rotationDeg={90}/>
               {polygons.sort(polygonsCompareFn(centerDot)).map((poly, index) => {
                 const polygon = (
-                  <Polygon
+                  <PolygonComponent
                     type={poly.type}
                     points={poly.points}
                     isSelected={selectedPolygonIndex === index}
@@ -547,11 +552,11 @@ const App: React.FC = () => {
                   onClose={handlePolygonClose}
                 />
               )}
-              {previewEdge && (
+              {previewEdge && (tool === 'pathwalk' || tool === 'road' || tool === 'fence') && (
                 <PreviewEdge
                   from={previewEdge.from}
                   to={previewEdge.to}
-                  isPathwalk={tool === 'pathwalk'}
+                  kind={tool}
                 />
               )}
               {graph.nodes.map(node => (
@@ -560,7 +565,7 @@ const App: React.FC = () => {
                   node={node}
                   isSelected={selectedNodeId === node.id}
                   isHovered={hoveredNodeId === node.id}
-                  onHover={(nodeId) => (tool === 'select' || tool === 'pathwalk' || tool === 'road') && setHoveredNodeId(nodeId)}
+                  onHover={(nodeId) => (tool === 'select' || tool === 'pathwalk' || tool === 'road' || tool === 'fence') && setHoveredNodeId(nodeId)}
                   onDragMove={handleGraphNodeDrag}
                   onDragStart={node => setDraggingGraphNode(node)}
                   onDragEnd={() => setDraggingGraphNode(null)}
@@ -626,7 +631,7 @@ const App: React.FC = () => {
           className="road-edges-list"
         />
       )}
-      {selectedEdgeId != null && selectedEdge?.type === 'pathwalk' && (
+      {selectedEdge?.type === 'pathwalk' && (
         <EdgesList
           edges={graph.edges.filter(e => e.type === 'pathwalk')}
           selectedEdgeId={selectedEdgeId}
