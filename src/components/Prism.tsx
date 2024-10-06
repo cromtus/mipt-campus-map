@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Line } from 'react-konva';
 import DescriptionText from './DescriptionText';
 import { BuildingDescription, Entry } from '../types';
@@ -31,6 +31,7 @@ const Prism: React.FC<PrismProps> = ({
   handleDescriptionDrag,
   entries
 }) => {
+  const mainPoints = basePoints;
   basePoints = expandBasePoints(basePoints);
 
   // Use expandedBasePoints instead of basePoints for the rest of the component
@@ -47,18 +48,34 @@ const Prism: React.FC<PrismProps> = ({
   };
 
   const baseProjected = basePoints;
-  const topProjected = basePoints.map(point => projectPoint(point[0], point[1], height));
+  const topProjected = useMemo(
+    () => basePoints.map(point => projectPoint(point[0], point[1], height)),
+    [basePoints, height, projectPoint]
+  );
+
+  const mainProjected = useMemo(
+    () => mainPoints.map(point => projectPoint(point[0], point[1], height)),
+    [mainPoints, height, projectPoint]
+  );
+
+  const orientedArea = useMemo(() => basePoints.reduce((area, point, index) => {
+    const nextIndex = (index + 1) % basePoints.length;
+    return area + (point[0] * basePoints[nextIndex][1] - basePoints[nextIndex][0] * point[1]);
+  }, 0), [basePoints]);
 
   const faceColor = 'rgba(255, 255, 255, 0.5)';
 
   // Sort faces based on the average distance of their vertices to the stage center
-  const sortedFaces = baseProjected
+  const sortedFaces = useMemo(() => baseProjected
     .map((_, index) => {
       const nextIndex = (index + 1) % baseProjected.length;
       const distance = distanceToSegment(stageX, stageY, baseProjected[index][0], baseProjected[index][1], baseProjected[nextIndex][0], baseProjected[nextIndex][1]);
-      return { index, distance };
+      const sweepArea = vectorProduct(baseProjected[index][0] - stageX, baseProjected[index][1] - stageY, baseProjected[nextIndex][0] - stageX, baseProjected[nextIndex][1] - stageY);
+      const isSeen = sweepArea * orientedArea < 0;
+      return { index, distance, isSeen };
     })
-    .sort((a, b) => b.distance - a.distance);
+    .sort((a, b) => b.distance - a.distance),
+  [baseProjected, stageX, stageY, orientedArea]);
 
   const strokeWidth = 1;
 
@@ -73,7 +90,7 @@ const Prism: React.FC<PrismProps> = ({
         strokeWidth={strokeWidth}
       />
       {/* Sorted side faces */}
-      {sortedFaces.map(({ index }) => {
+      {sortedFaces.map(({ index, isSeen }) => {
         const nextIndex = (index + 1) % baseProjected.length;
         const points = [
           ...baseProjected[index],
@@ -81,7 +98,7 @@ const Prism: React.FC<PrismProps> = ({
           ...topProjected[nextIndex],
           ...topProjected[index],
         ];
-        return (
+        return isSeen ? (
           <Line
             lineJoin="round"
             key={index}
@@ -91,8 +108,17 @@ const Prism: React.FC<PrismProps> = ({
             stroke={index % 2 === 0 ? color : (secondaryColor ?? color)}
             strokeWidth={strokeWidth}
           />
-        );
+        ) : null;
       })}
+      {/* Main side edges */}
+      {mainPoints.map((point, index) => (
+        <Line
+          key={index}
+          points={[point[0], point[1], mainProjected[index][0], mainProjected[index][1]]}
+          stroke={color}
+          strokeWidth={strokeWidth}
+        />
+      ))}
       {/* Top face */}
       <Line
         points={topProjected.flat()}
@@ -187,3 +213,7 @@ function expandBasePoints(points: number[][]): number[][] {
     return acc;
   }, []);
 };
+
+function vectorProduct(ax: number, ay: number, bx: number, by: number): number {
+  return ax * by - ay * bx;
+}
