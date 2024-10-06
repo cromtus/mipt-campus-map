@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { localStorageKeys } from '../utils/export';
 
 export const useLocalStorage = <T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
   const [value, setValue] = useState<T>(() => {
@@ -9,6 +10,10 @@ export const useLocalStorage = <T>(key: string, initialValue: T): [T, React.Disp
   useEffect(() => {
     localStorage.setItem(key, JSON.stringify(value));
   }, [key, value]);
+
+  if (!localStorageKeys.includes(key)) {
+    localStorageKeys.push(key);
+  }
 
   return [value, setValue];
 };

@@ -7,6 +7,14 @@ export type Entry = {
   position: number; // Value between 0 and 1
 };
 
+export interface BuildingDescription {
+  text: string;
+  offsetX: number;
+  offsetY: number;
+  alignment: TextAlignment;
+  reversed: boolean;
+}
+
 export type Polygon = {
   points: number[][];
 } & (
@@ -15,12 +23,7 @@ export type Polygon = {
       height: number; 
       color: string; 
       secondaryColor?: string;
-      description?: {
-        text: string;
-        offsetX: number;
-        offsetY: number;
-        alignment: TextAlignment;
-      };
+      description?: BuildingDescription;
       entries: Entry[];
     }
   | { type: 'pavement' }

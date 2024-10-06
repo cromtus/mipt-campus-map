@@ -14,7 +14,6 @@ body {
     width: 100%;
     height: 100%;
     touch-action: none;
-    background-color: #e8f7e8;
 }
 
 .canvas-container.polygon-tool {
@@ -49,4 +48,32 @@ body {
 .tool-panel button.active {
     background-color: #3498db;
     color: white;
+}
+
+.export-buttons {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    display: flex;
+    gap: 10px;
+}
+
+.download-button {
+    padding: 5px 10px;
+    border: none;
+    background-color: #3498db;
+    color: white;
+}
+
+.download-button:hover {
+    background-color: #2980b9;
+}
+
+.download-button:active {
+    background-color: #1f618d;
+}
+
+.download-button:focus {
+    outline: none;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Line } from 'react-konva';
 import DescriptionText from './DescriptionText';
-import { TextAlignment, Entry } from '../types';
+import { BuildingDescription, Entry } from '../types';
 import EntryMarker from './EntryMarker';
 
 interface PrismProps {
@@ -13,12 +13,7 @@ interface PrismProps {
   canvasHeight: number;
   stageX: number;
   stageY: number;
-  description?: {
-    text: string;
-    offsetX: number;
-    offsetY: number;
-    alignment: TextAlignment;
-  };
+  description?: BuildingDescription;
   entries: Entry[];
   handleDescriptionDrag: (newOffset: { offsetX: number; offsetY: number }) => void;
 }

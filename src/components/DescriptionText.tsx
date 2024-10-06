@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Circle, Group, Text } from 'react-konva';
-import { TextAlignment } from '../types';
+import { BuildingDescription } from '../types';
 import Konva from 'konva';
 
 interface DescriptionTextProps {
-  description: { text: string; offsetX: number; offsetY: number; alignment: TextAlignment };
+  description: BuildingDescription;
   centerX: number;
   centerY: number;
   onDragMove: (newOffset: { offsetX: number; offsetY: number }) => void;
@@ -18,6 +18,7 @@ const DescriptionText: React.FC<DescriptionTextProps> = ({
 }) => {
   const { text, offsetX, offsetY, alignment } = description;
   const lines = text.split('\n');
+  const yMultiplier = description.reversed ? -1 : 1;
 
   return (
     <Group
@@ -37,7 +38,7 @@ const DescriptionText: React.FC<DescriptionTextProps> = ({
           alignment={alignment}
           fontSize={index === 0 ? 24 : 12}
           fontStyle={lines.length > 2 ? (index < 2 ? 'bold' : 'normal') : (index < 1 ? 'bold' : 'normal')}
-          y={index === 0 ? 0 : index * 12 + 12}
+          y={(index === 0 ? 0 : index * 12 + (description.reversed ? 0 : 12)) * yMultiplier}
         />
       ))}
     </Group>
@@ -48,7 +49,7 @@ export default DescriptionText;
 
 type AlignedTextProps = {
   text: string;
-  alignment: TextAlignment;
+  alignment: BuildingDescription['alignment'];
   fontSize: number;
   fontStyle?: string;
   y?: number;

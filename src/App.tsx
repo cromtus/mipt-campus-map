@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Stage, Layer, Group, Image as Img, Line, Rect as Rectangle, Text } from 'react-konva';
+import { Stage, Layer, Group, Image, Line, Rect as Rectangle, Text } from 'react-konva';
 import { useGesture } from '@use-gesture/react';
 import ToolPanel from './components/ToolPanel';
 import PolygonComponent from './components/Polygon';
@@ -8,7 +8,6 @@ import PropertiesPanel from './components/PropertiesPanel';
 import { Tool, Graph, GraphNode, GraphEdge, Polygon, Rect as RectType } from './types';
 import { snapPosition } from './utils/snapPosition';
 import Prism from './components/Prism';
-import LayersPanel from './components/LayersPanel';
 import GraphEdgeComponent from './components/GraphEdge';
 import GraphNodeComponent from './components/GraphNode';
 import EdgesList from './components/EdgesList';
@@ -17,11 +16,11 @@ import PreviewEdge from './components/PreviewEdge';
 import PreviewPoint from './components/PreviewPoint';
 import TwoDegreeNodes from './components/TwoDegreeNodes';
 import { Barriers } from './components/Barriers';
-import EntryMarker from './components/EntryMarker';
 import YouAreHere from './components/YouAreHere';
 import Rect from './components/Rect';
 import RectPropertiesPanel from './components/RectPropertiesPanel';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { exportJSON, exportSVG } from './utils/export';
 
 const prismHeight = 100;
 
@@ -377,7 +376,7 @@ const App: React.FC = () => {
   const [imageElement, setImageElement] = useState<HTMLImageElement | undefined>(undefined);
 
   useEffect(() => {
-    const img = new Image();
+    const img = new window.Image();
     img.src = 'https://sun9-6.userapi.com/impg/_M4edCzdl94fuqja0uk2VHE3-GLb_Egh7Aq14Q/-lT4MRcHlsA.jpg?size=1036x914&quality=95&sign=ad46c6dad161b86db77d83eb3e8af862&type=album';
     img.onload = () => setImageElement(img);
   }, []);
@@ -473,7 +472,7 @@ const App: React.FC = () => {
     <div className="app">
       <div 
         className={`canvas-container ${tool === 'building' ? 'polygon-tool' : ''} ${tool === 'select' ? 'select-tool' : ''}`}
-                {...bind()}
+        {...bind()}
       >
         <Stage
           width={window.innerWidth}
@@ -491,6 +490,7 @@ const App: React.FC = () => {
         >
           <Layer>
             <Group>
+              <Rectangle x={-5000} y={-5000} width={10000} height={10000} fill="#e8f7e8" />
               {/* <Img image={imageElement} opacity={0.5} /> */}
               {renderPreviewPoint()}
               {graph.edges.sort((a, b) => {
@@ -666,6 +666,10 @@ const App: React.FC = () => {
           onChange={(updatedRect) => handleRectChange(selectedRectIndex, updatedRect)}
         />
       )}
+      <div className="export-buttons">
+        <button className="download-button" onClick={() => exportSVG(stageRef.current)}>Download</button>
+        <button className="download-button" onClick={() => exportJSON()}>Export JSON</button>
+      </div>
     </div>
   );
 };

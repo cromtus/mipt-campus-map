@@ -21,20 +21,20 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedPolygon, onPo
   if (!selectedPolygon || selectedPolygon.type !== 'building') return null;
 
   const handleDescriptionChange = (text: string) => {
-    const updatedPolygon: Polygon = {
-      ...selectedPolygon,
-      description: selectedPolygon.description 
-        ? { ...selectedPolygon.description, text } 
-        : { text, offsetX: 0, offsetY: 0, alignment: 'center' } // Default coordinates
-    };
-    onPolygonChange(updatedPolygon);
+    if (selectedPolygon.description) {
+      const updatedPolygon: Polygon = {
+        ...selectedPolygon,
+        description: { ...selectedPolygon.description, text }
+      };
+      onPolygonChange(updatedPolygon);
+    }
   };
 
   const toggleDescription = () => {
     if (!showDescription) {
       const updatedPolygon: Polygon = {
         ...selectedPolygon,
-        description: { text: '', offsetX: 0, offsetY: 0, alignment: 'center' }
+        description: { text: '', offsetX: 0, offsetY: 0, alignment: 'center', reversed: false }
       };
       onPolygonChange(updatedPolygon);
     } else {
@@ -49,6 +49,16 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedPolygon, onPo
       const updatedPolygon = {
         ...selectedPolygon,
         description: { ...selectedPolygon.description, alignment }
+      };
+      onPolygonChange(updatedPolygon);
+    }
+  };
+
+  const handleReversedChange = (reversed: boolean) => {
+    if (selectedPolygon.type === 'building' && selectedPolygon.description) {
+      const updatedPolygon = {
+        ...selectedPolygon,
+        description: { ...selectedPolygon.description, reversed }
       };
       onPolygonChange(updatedPolygon);
     }
@@ -164,6 +174,14 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedPolygon, onPo
               Right
             </button>
           </div>
+          <label>
+            <input
+              type="checkbox"
+              checked={selectedPolygon.description.reversed}
+              onChange={(e) => handleReversedChange(e.target.checked)}
+            />
+            Reversed
+          </label>
         </>
       )}
       {selectedPolygon && selectedPolygon.type === 'building' && (
