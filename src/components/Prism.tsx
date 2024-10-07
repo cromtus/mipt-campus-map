@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
-import { Line } from 'react-konva';
+import { Group, Line } from 'react-konva';
 import DescriptionText from './DescriptionText';
 import { BuildingDescription, Entry } from '../types';
 import EntryMarker from './EntryMarker';
+import { union } from '@turf/union';
+import { featureCollection, polygon } from '@turf/helpers';
 
 interface PrismProps {
   basePoints: number[][];
@@ -77,10 +79,26 @@ const Prism: React.FC<PrismProps> = ({
     .sort((a, b) => b.distance - a.distance),
   [baseProjected, stageX, stageY, orientedArea]);
 
-  const strokeWidth = 1;
+  const strokeWidth = 0.7;
+  const thickerStrokeWidth = 3
+
+  const allPolygons = [
+    mainPoints,
+    ...mainPoints.map((_, index) => {
+      const nextIndex = (index + 1) % mainPoints.length;
+      return [
+        mainPoints[index],
+        mainPoints[nextIndex],
+        mainProjected[nextIndex],
+        mainProjected[index],
+      ];
+    }),
+    mainProjected
+  ]
+  const unionPoints = allPolygons.reduce(unionPolygons, []).flat();
 
   return (
-    <>
+    <Group>
       {/* Base face */}
       <Line
         points={baseProjected.flat()}
@@ -127,6 +145,13 @@ const Prism: React.FC<PrismProps> = ({
         stroke={color}
         strokeWidth={strokeWidth}
       />
+      {/* Union */}
+      <Line
+        points={unionPoints}
+        closed={true}
+        stroke={color}
+        strokeWidth={thickerStrokeWidth}
+      />
       {description && (
         <DescriptionText
           description={description}
@@ -142,7 +167,7 @@ const Prism: React.FC<PrismProps> = ({
           entry={entry.position}
         />
       ))}
-    </>
+    </Group>
   );
 };
 
@@ -216,4 +241,30 @@ function expandBasePoints(points: number[][]): number[][] {
 
 function vectorProduct(ax: number, ay: number, bx: number, by: number): number {
   return ax * by - ay * bx;
+}
+
+function unionPolygons(polygon1: number[][], polygon2: number[][]): number[][] {
+  if (polygon1.length === 0) {
+    return polygon2
+  }
+  if (polygon2.length === 0) {
+    return polygon1
+  }
+  polygon1 = [...polygon1, polygon1[0]];
+  polygon2 = [...polygon2, polygon2[0]];
+  try {
+    var poly1 = polygon([polygon1]);
+    var poly2 = polygon([polygon2]);
+  } catch (e) {
+    return []
+  }
+
+  let result = union(featureCollection([poly1, poly2]))?.geometry.coordinates as any
+  if (result == null) {
+    return []
+  }
+  while (typeof result[0][0] !== 'number') {
+    result = result[0]
+  }
+  return result
 }

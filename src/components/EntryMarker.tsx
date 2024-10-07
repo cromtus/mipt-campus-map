@@ -60,7 +60,14 @@ const EntryMarker: React.FC<EntryMarkerProps> = ({ points, entry }) => {
       y={markerPosition[1]}
       rotation={markerAngle * 180 / Math.PI}
     >
-      <Line points={markerPoints} fill="rgb(128, 128, 128)" closed />
+      <Line
+        points={markerPoints}
+        fill="rgb(0, 150, 0)"
+        // stroke="rgba(255, 255, 255, 0.5)"
+        // fillAfterStrokeEnabled
+        // strokeWidth={2}
+        closed
+      />
     </Group>
   );
 };

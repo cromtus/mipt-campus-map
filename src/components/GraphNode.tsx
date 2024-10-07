@@ -18,7 +18,7 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, isSelected, onDragStart, on
       x={node.x}
       y={node.y}
       radius={5}
-      fill={isSelected ? 'red' : isHovered ? 'yellow' : 'transparent'}
+      fill={isSelected ? 'red' : isHovered ? 'yellow' : 'rgba(0, 0, 0, 0)'}
       draggable
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}

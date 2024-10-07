@@ -29,7 +29,7 @@ const Rect: React.FC<RectProps> = ({ rect, isSelected, onHoverUpdate, onChange }
   const x = rect.width < 0 ? rect.x + rect.width : rect.x;
   const y = rect.height < 0 ? rect.y + rect.height : rect.y;
 
-  const icon = useReactIcon(FaPersonRunning, 'rgba(0, 128, 0, 0.2)');
+  const icon = useReactIcon(FaPersonRunning, '#a6d6a6');
 
   return (
     <>
