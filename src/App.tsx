@@ -20,7 +20,7 @@ import YouAreHere from './components/YouAreHere';
 import Rect from './components/Rect';
 import RectPropertiesPanel from './components/RectPropertiesPanel';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { exportJSON, exportSVG } from './utils/export';
+import { exportJSON, exportPDF, exportSVG } from './utils/export';
 import ImportButton from './components/ImportButton';
 
 const prismHeight = 100;
@@ -668,7 +668,8 @@ const App: React.FC = () => {
         />
       )}
       <div className="export-buttons">
-        <button className="download-button" onClick={() => exportSVG(stageRef.current)}>Download</button>
+        {/* <button className="download-button" onClick={() => exportSVG(stageRef.current)}>Download SVG</button> */}
+        <button className="download-button" onClick={() => exportPDF(stageRef.current)}>Download PDF</button>
         <button className="download-button" onClick={() => exportJSON()}>Export JSON</button>
         {/* <ImportButton className="download-button" /> */}
       </div>
