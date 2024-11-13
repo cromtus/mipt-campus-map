@@ -11,6 +11,8 @@ interface PolygonProps {
   onPolygonDrag: (newPositions: number[][]) => void;
   onDragStart: (nodeIndex: number) => void;
   onDragEnd: (nodeIndex: number) => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
 const Polygon: React.FC<PolygonProps> = ({ 
@@ -22,7 +24,9 @@ const Polygon: React.FC<PolygonProps> = ({
   onNodeDrag, 
   onPolygonDrag,
   onDragStart,
-  onDragEnd
+  onDragEnd,
+  onMouseEnter,
+  onMouseLeave
 }) => {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -80,6 +84,8 @@ const Polygon: React.FC<PolygonProps> = ({
         draggable={isSelected}
         onDragStart={handlePolygonDragStart}
         onDragEnd={handlePolygonDragEnd}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
       />
       {isEditing && !isDragging && points.map((point, index) => (
         <Circle

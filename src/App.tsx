@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Stage, Layer, Group, Image, Line, Rect as Rectangle, Text } from 'react-konva';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Stage, Layer, Group, Line, Rect as Rectangle, Text } from 'react-konva';
 import { useGesture } from '@use-gesture/react';
 import ToolPanel from './components/ToolPanel';
 import PolygonComponent from './components/Polygon';
@@ -10,7 +10,6 @@ import { snapPosition } from './utils/snapPosition';
 import Prism from './components/Prism';
 import GraphEdgeComponent from './components/GraphEdge';
 import GraphNodeComponent from './components/GraphNode';
-import EdgesList from './components/EdgesList';
 import EdgePropertiesPanel from './components/EdgePropertiesPanel';
 import PreviewEdge from './components/PreviewEdge';
 import PreviewPoint from './components/PreviewPoint';
@@ -20,8 +19,8 @@ import YouAreHere from './components/YouAreHere';
 import Rect from './components/Rect';
 import RectPropertiesPanel from './components/RectPropertiesPanel';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { exportJSON, exportPDF, exportSVG } from './utils/export';
-import ImportButton from './components/ImportButton';
+import { exportJSON, exportPDF } from './utils/export';
+import { useKeyboard } from './hooks/useKeyboard';
 
 const prismHeight = 100;
 
@@ -32,7 +31,6 @@ const App: React.FC = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
-  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
   const [snappedMousePosition, setSnappedMousePosition] = useState<{ x: number; y: number } | null>(null);
   const [selectedPolygonIndex, setSelectedPolygonIndex] = useState<number | null>(null);
   const [hoveredPolygonIndex, setHoveredPolygonIndex] = useState<number | null>(null);
@@ -58,6 +56,22 @@ const App: React.FC = () => {
   const [hoveredRectIndex, setHoveredRectIndex] = useState<number | null>(null);
   const [drawingRect, setDrawingRect] = useState<{ x: number; y: number } | null>(null);
 
+  const handleDelete = useCallback(() => {
+    handleDeletePolygon();
+    handleDeleteEdge();
+    handleDeleteRect();
+  }, [selectedPolygonIndex, selectedEdgeId, selectedRectIndex]);
+
+  const handleCancelEdge = useCallback(() => {
+    setIsDrawingEdge(false);
+    setPreviewEdge(null);
+  }, []);
+
+  const { isCtrlPressed } = useKeyboard({
+    onDelete: handleDelete,
+    onCancelEdge: handleCancelEdge,
+  });
+
   useEffect(() => {
     const handleResize = () => {
       if (stageRef.current) {
@@ -69,32 +83,6 @@ const App: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Control') setIsCtrlPressed(true);
-      if (e.key === 'Delete') {
-        handleDeletePolygon();
-        handleDeleteEdge();
-        handleDeleteRect();
-      }
-      if (e.key === 'c') {
-        setIsDrawingEdge(false);
-        setPreviewEdge(null);
-      }
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Control') setIsCtrlPressed(false);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [selectedPolygonIndex, selectedEdgeId]);
 
   useEffect(() => {
     if (mousePosition) {
@@ -237,27 +225,26 @@ const App: React.FC = () => {
   };
 
   const handleNodeDrag = (polygonIndex: number, nodeIndex: number) => {
-    setPolygons(prevPolygons => {
-      const updatedPolygons = [...prevPolygons];
-      updatedPolygons[polygonIndex] = {
-        ...updatedPolygons[polygonIndex],
-        points: updatedPolygons[polygonIndex].points.map((point, i) => 
-          i === nodeIndex ? (
-            snappedMousePosition ? [snappedMousePosition.x, snappedMousePosition.y] : point
-          ) : point
-        )
-      };
-      return updatedPolygons;
+    if (!snappedMousePosition) return;
+    
+    setPolygons(draft => {
+      draft[polygonIndex].points[nodeIndex] = [snappedMousePosition.x, snappedMousePosition.y];
     });
-    return snappedMousePosition ? [snappedMousePosition.x, snappedMousePosition.y] : undefined;
+    
+    return [snappedMousePosition.x, snappedMousePosition.y];
   };
   
   const handleGraphNodeDrag = (node: GraphNode) => {
-    // Update node position in the appropriate graph
-    setGraph(prevGraph => ({
-      ...prevGraph,
-      nodes: prevGraph.nodes.map(n => n.id === node.id ? { ...n, ...snappedMousePosition } : n),
-    }));
+    if (!snappedMousePosition) return node;
+
+    setGraph(draft => {
+      const nodeToUpdate = draft.nodes.find(n => n.id === node.id);
+      if (nodeToUpdate) {
+        nodeToUpdate.x = snappedMousePosition.x;
+        nodeToUpdate.y = snappedMousePosition.y;
+      }
+    });
+
     return { ...node, ...snappedMousePosition };
   }
 
@@ -268,13 +255,9 @@ const App: React.FC = () => {
       return [snapped.x, snapped.y];
     });
 
-    setPolygons(prevPolygons => {
-      const updatedPolygons = [...prevPolygons];
-      updatedPolygons[polygonIndex] = { ...updatedPolygons[polygonIndex], points: snappedPositions };
-      return updatedPolygons;
+    setPolygons(draft => {
+      draft[polygonIndex].points = snappedPositions;
     });
-
-    // We're not setting snappedInfo here because it might be confusing to show snap lines for all points
   };
 
   const handleToolChange = (newTool: Tool) => {
@@ -313,7 +296,9 @@ const App: React.FC = () => {
         default:
           return;
       }
-      setPolygons([...polygons, newPolygon]);
+      setPolygons(draft => {
+        draft.push(newPolygon);
+      });
       setCurrentPolygon([]);
     }
   };
@@ -364,23 +349,17 @@ const App: React.FC = () => {
   const handleStageMouseUp = () => {
     if (tool === 'rect' && drawingRect && mousePosition) {
       setDrawingRect(null);
-      setRects([...rects, {
-        x: drawingRect.x,
-        y: drawingRect.y,
-        width: mousePosition.x - drawingRect.x,
-        height: mousePosition.y - drawingRect.y,
-        cornerRadius: 0,
-      }])
+      setRects(draft => {
+        draft.push({
+          x: drawingRect.x,
+          y: drawingRect.y,
+          width: mousePosition.x - drawingRect.x,
+          height: mousePosition.y - drawingRect.y,
+          cornerRadius: 0,
+        });
+      });
     }
   };
-
-  const [imageElement, setImageElement] = useState<HTMLImageElement | undefined>(undefined);
-
-  useEffect(() => {
-    const img = new window.Image();
-    img.src = 'https://sun9-6.userapi.com/impg/_M4edCzdl94fuqja0uk2VHE3-GLb_Egh7Aq14Q/-lT4MRcHlsA.jpg?size=1036x914&quality=95&sign=ad46c6dad161b86db77d83eb3e8af862&type=album';
-    img.onload = () => setImageElement(img);
-  }, []);
 
   const handlePolygonChange = (updatedPolygon: Polygon) => {
     if (selectedPolygonIndex !== null) {
@@ -393,34 +372,19 @@ const App: React.FC = () => {
   };
 
   const handleDescriptionDrag = (polygonIndex: number, newOffset: { offsetX: number; offsetY: number }) => {
-    setPolygons(prevPolygons => {
-      const newPolygons = [...prevPolygons];
-      const selectedPolygon = newPolygons[polygonIndex];
-      if (selectedPolygon.type === 'building' && selectedPolygon.description) {
-        selectedPolygon.description = {
-          ...selectedPolygon.description,
-          ...newOffset
-        };
+    setPolygons(draft => {
+      const polygon = draft[polygonIndex];
+      if (polygon.type === 'building' && polygon.description) {
+        polygon.description.offsetX = newOffset.offsetX;
+        polygon.description.offsetY = newOffset.offsetY;
       }
-      return newPolygons;
     });
   };
 
-  const handleSelectPolygon = (index: number) => {
-    setTool('select');
-    setSelectedPolygonIndex(index);
-    setSelectedEdgeId(null);
-    setSelectedNodeId(null);
-  };
-
   const handleRectChange = (index: number, updatedRect: RectType) => {
-    setRects(rects.map((r, i) => i === index ? updatedRect : r));
-  };
-
-  const handleSelectEdge = (edgeId: string | null) => {
-    setSelectedEdgeId(edgeId);
-    setSelectedPolygonIndex(null);
-    setSelectedNodeId(null);
+    setRects(draft => {
+      draft[index] = updatedRect;
+    });
   };
 
   const handleMouseMove = (e: any) => {
@@ -431,14 +395,7 @@ const App: React.FC = () => {
       y: (point.y - position.y) / scale,
     };
 
-    const sortedPolygons = [...polygons].sort(polygonsCompareFn(scaledPoint)).reverse();
-    const hoveredPoly = sortedPolygons.find((poly) =>
-      isPointInPolygon(scaledPoint, poly.points)
-    );
-    const hoveredIndex = hoveredPoly ? polygons.indexOf(hoveredPoly) : null;
-
-    setHoveredPolygonIndex(hoveredIndex !== -1 ? hoveredIndex : null);
-
+    setMousePosition(scaledPoint);
     setPreviewEdge(prev => prev ? { ...prev, to: snappedMousePosition ?? prev.from } : null);
   };
 
@@ -492,7 +449,6 @@ const App: React.FC = () => {
           <Layer>
             <Group>
               <Rectangle x={-5000} y={-5000} width={10000} height={10000} fill="#e8f7e8" />
-              {/* <Img image={imageElement} opacity={0.5} /> */}
               {renderPreviewPoint()}
               {graph.edges.sort((a, b) => {
                 if (a.type === 'road') return 1;
@@ -527,6 +483,7 @@ const App: React.FC = () => {
               {polygons.sort(polygonsCompareFn(centerDot)).map((poly, index) => {
                 const polygon = (
                   <PolygonComponent
+                    key={index}
                     type={poly.type}
                     points={poly.points}
                     isSelected={selectedPolygonIndex === index}
@@ -536,6 +493,8 @@ const App: React.FC = () => {
                     onPolygonDrag={(newPositions) => handlePolygonDrag(index, newPositions)}
                     onDragStart={(nodeIndex) => setDraggingPolygonNode({ polygonIndex: index, nodeIndex })}
                     onDragEnd={() => setDraggingPolygonNode(null)}
+                    onMouseEnter={() => tool === 'select' && setHoveredPolygonIndex(index)}
+                    onMouseLeave={() => setHoveredPolygonIndex(null)}
                   />
                 )
                 const prism = poly.type === 'building' ? (
@@ -625,31 +584,6 @@ const App: React.FC = () => {
           )}
         </>
       )}
-      {/* {selectedPolygonIndex != null && (
-        <LayersPanel 
-          polygons={polygons}
-          selectedPolygonIndex={selectedPolygonIndex}
-          onSelectPolygon={handleSelectPolygon}
-        />
-      )} */}
-      {selectedEdge?.type === 'road' && (
-        <EdgesList
-          edges={graph.edges.filter(e => e.type === 'road')}
-          selectedEdgeId={selectedEdgeId}
-          onSelectEdge={handleSelectEdge}
-          title="Road Edges"
-          className="road-edges-list"
-        />
-      )}
-      {/* {selectedEdge?.type === 'pathwalk' && (
-        <EdgesList
-          edges={graph.edges.filter(e => e.type === 'pathwalk')}
-          selectedEdgeId={selectedEdgeId}
-          onSelectEdge={handleSelectEdge}
-          title="Pathwalk Edges"
-          className="pathwalk-edges-list"
-        />
-      )} */}
       {selectedEdge?.type === 'road' && (
         <EdgePropertiesPanel
           edgeWidth={selectedEdge.width}
@@ -668,27 +602,12 @@ const App: React.FC = () => {
         />
       )}
       <div className="export-buttons">
-        {/* <button className="download-button" onClick={() => exportSVG(stageRef.current)}>Download SVG</button> */}
         <button className="download-button" onClick={() => exportPDF(stageRef.current)}>Download PDF</button>
         <button className="download-button" onClick={() => exportJSON()}>Export JSON</button>
-        {/* <ImportButton className="download-button" /> */}
       </div>
     </div>
   );
 };
-
-// Helper function to check if a point is inside a polygon
-function isPointInPolygon(point: { x: number; y: number }, polygon: number[][]) {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i][0], yi = polygon[i][1];
-    const xj = polygon[j][0], yj = polygon[j][1];
-    const intersect = ((yi > point.y) !== (yj > point.y))
-        && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
 
 export default App;
 
