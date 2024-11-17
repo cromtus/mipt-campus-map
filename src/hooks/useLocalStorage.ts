@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Updater, useImmer } from 'use-immer';
 import { localStorageKeys } from '../utils/export';
 

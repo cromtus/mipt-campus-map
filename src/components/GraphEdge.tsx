@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Circle, Line } from 'react-konva';
 import { GraphEdge as GraphEdgeType, GraphNode } from '../types';
 import { getIntersection } from '../utils/geometry';
@@ -7,12 +7,13 @@ interface GraphEdgeProps {
   edge: GraphEdgeType;
   edges: GraphEdgeType[];
   nodes: Map<string, GraphNode>;
+  interactive: boolean;
   isSelected: boolean;
-  isHovered: boolean;
-  onHover: (edgeId: string | null) => void;
+  onSelect: () => void;
 }
 
-const GraphEdge: React.FC<GraphEdgeProps> = ({ edge, edges, nodes, isSelected, isHovered, onHover }) => {
+const GraphEdge: React.FC<GraphEdgeProps> = ({ edge, edges, nodes, interactive, isSelected, onSelect }) => {
+  const [isHovered, setIsHovered] = useState(false);
   const fromNode = nodes.get(edge.from);
   const toNode = nodes.get(edge.to);
 
@@ -51,8 +52,14 @@ const GraphEdge: React.FC<GraphEdgeProps> = ({ edge, edges, nodes, isSelected, i
         stroke={stroke}
         strokeWidth={edge.type === 'pathwalk' ? 1 : edge.type === 'fence' ? 1 : edge.width}
         dash={edge.type === 'pathwalk' ? [3, 3] : undefined}
-        onMouseEnter={() => onHover(edge.id)}
-        onMouseLeave={() => onHover(null)}
+        onMouseEnter={() => interactive && setIsHovered(true)}
+        onMouseLeave={() => interactive && setIsHovered(false)}
+        onClick={e => {
+          if (interactive) {
+            e.cancelBubble = true;
+            onSelect()
+          }
+        }}
       />
       {schlagbaum && (
         <Circle

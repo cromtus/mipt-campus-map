@@ -1,34 +1,35 @@
 import React, { useState } from 'react';
-import { Line, Circle, Group } from 'react-konva';
+import { Line, Circle } from 'react-konva';
+import Prism from './Prism';
+import { Polygon as PolygonType } from '../types';
 
 interface PolygonProps {
-  points: number[][];
+  polygon: PolygonType;
+  centerDot: { x: number, y: number };
+  interactive: boolean;
   isSelected: boolean;
-  isHovered: boolean;
-  isEditing: boolean;
-  type: 'building' | 'grass' | 'footpath' | 'pavement' | 'road';
+  onSelect: () => void;
   onNodeDrag: (index: number, newPosition: number[]) => number[] | undefined;
   onPolygonDrag: (newPositions: number[][]) => void;
+  onDescriptionDrag: (newOffset: { offsetX: number; offsetY: number }) => void;
   onDragStart: (nodeIndex: number) => void;
   onDragEnd: (nodeIndex: number) => void;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
 }
 
-const Polygon: React.FC<PolygonProps> = ({ 
-  points, 
-  isSelected, 
-  isHovered, 
-  isEditing, 
-  type,
-  onNodeDrag, 
+const Polygon: React.FC<PolygonProps> = ({
+  polygon,
+  centerDot,
+  interactive,
+  isSelected,
+  onSelect,
+  onNodeDrag,
   onPolygonDrag,
+  onDescriptionDrag,
   onDragStart,
   onDragEnd,
-  onMouseEnter,
-  onMouseLeave
 }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [isHovered, setHovered] = useState(false);
 
   const handlePolygonDragStart = () => {
     setIsDragging(true);
@@ -40,7 +41,7 @@ const Polygon: React.FC<PolygonProps> = ({
     const dx = node.x();
     const dy = node.y();
     
-    const newPositions = points.map(point => [
+    const newPositions = polygon.points.map(point => [
       point[0] + dx,
       point[1] + dy
     ]);
@@ -58,25 +59,42 @@ const Polygon: React.FC<PolygonProps> = ({
   };
 
   const getColors = () => {
-    if (type === 'pavement') {
+    if (polygon.type === 'pavement') {
       return {
-        fill: 'rgb(245, 245, 224)', // Light yellow
+        fill: isSelected ? 'rgb(122, 122, 112)' : isHovered ? 'rgb(183, 183, 168)' : 'rgb(245, 245, 224)', // Light yellow
       };
     } else {
       return {
         stroke: isSelected ? "blue" : isHovered ? "black" : undefined,
         strokeWidth: isSelected || isHovered ? 3 : 0,
-        fill: isSelected ? "rgba(0, 0, 255, 0.1)" : isHovered ? "rgba(0, 255, 0, 0.1)" : "rgba(255, 255, 255, 0.33)"
+        fill: isSelected ? "rgba(0, 0, 255, 0.1)" : isHovered ? "rgba(0, 255, 0, 0.1)" : undefined
       };
     }
   };
+
+  const prism = polygon.type === 'building' ? (
+    <Prism
+      basePoints={polygon.points}
+      height={polygon.height}
+      color={polygon.color}
+      secondaryColor={polygon.secondaryColor}
+      description={polygon.description}
+      handleDescriptionDrag={(newOffset) => onDescriptionDrag(newOffset)}
+      canvasWidth={window.innerWidth}
+      canvasHeight={window.innerHeight}
+      stageX={centerDot.x}
+      stageY={centerDot.y}
+      entries={polygon.entries}
+    />
+  ) : null
 
   const { stroke, fill, strokeWidth } = getColors();
 
   return (
     <>
+      {prism}
       <Line
-        points={points.flat()}
+        points={polygon.points.flat()}
         closed={true}
         stroke={stroke}
         fill={fill}
@@ -84,10 +102,16 @@ const Polygon: React.FC<PolygonProps> = ({
         draggable={isSelected}
         onDragStart={handlePolygonDragStart}
         onDragEnd={handlePolygonDragEnd}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
+        onMouseEnter={() => interactive && setHovered(true)}
+        onMouseLeave={() => interactive && setHovered(false)}
+        onClick={(e) => {
+          if (interactive) {
+            e.cancelBubble = true
+            onSelect()
+          }
+        }}
       />
-      {isEditing && !isDragging && points.map((point, index) => (
+      {isSelected && !isDragging && polygon.points.map((point, index) => (
         <Circle
           key={index}
           x={point[0]}

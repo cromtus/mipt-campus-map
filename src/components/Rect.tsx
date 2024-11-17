@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Rect as KonvaRect, Circle, Image } from 'react-konva';
 import { Rect as RectType } from '../types';
 import { FaPersonRunning } from 'react-icons/fa6';
@@ -7,11 +7,13 @@ import useReactIcon from '../hooks/useReactIcon';
 interface RectProps {
   rect: RectType;
   isSelected: boolean;
-  onHoverUpdate: (hovered: boolean) => void;
   onChange: (updatedRect: RectType) => void;
+  interactive: boolean;
+  onSelect: () => void;
 }
 
-const Rect: React.FC<RectProps> = ({ rect, isSelected, onHoverUpdate, onChange }) => {
+const Rect: React.FC<RectProps> = ({ rect, isSelected, onChange, interactive, onSelect }) => {
+  const [isHovered, setIsHovered] = useState(false);
   const handleDragMove = (e: any) => {
     onChange({ ...rect, x: e.target.x(), y: e.target.y() });
   };
@@ -42,8 +44,14 @@ const Rect: React.FC<RectProps> = ({ rect, isSelected, onHoverUpdate, onChange }
         fill="rgba(0, 128, 0, 0.1)"
         stroke={isSelected ? 'blue' : 'rgba(0, 72, 0, 0.1)'}
         strokeWidth={isSelected ? 2 : 1}
-        onMouseEnter={() => onHoverUpdate(true)}
-        onMouseLeave={() => onHoverUpdate(false)}
+        onMouseEnter={() => interactive && setIsHovered(true)}
+        onMouseLeave={() => interactive && setIsHovered(false)}
+        onClick={e => {
+          if (interactive) {
+            e.cancelBubble = true;
+            onSelect()
+          }
+        }}
         draggable
         onDragMove={handleDragMove}
       />

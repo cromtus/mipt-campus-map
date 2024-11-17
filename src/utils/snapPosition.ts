@@ -4,13 +4,13 @@ type SnapLine = {
 }
 
 export function snapPosition(
-    endPoint: { x: number; y: number },
+    endPoint: { x: number; y: number } | null,
     isCtrlPressed: boolean,
     allPoints: number[][]
-  ): { 
-    snapped: { x: number; y: number }, 
-    snapLines: { from: { x: number; y: number }, to: { x: number; y: number } }[] 
-  } {
+  ) {
+    if (endPoint == null) {
+      return null
+    }
 
     let snappedX = endPoint.x;
     let snappedY = endPoint.y;

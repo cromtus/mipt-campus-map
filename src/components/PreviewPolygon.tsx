@@ -3,7 +3,7 @@ import { Line, Circle } from 'react-konva';
 
 interface PreviewPolygonProps {
   points: number[][];
-  mousePosition: { x: number; y: number } | null;
+  mousePosition?: { x: number; y: number };
   onClose: () => void;
 }
 
