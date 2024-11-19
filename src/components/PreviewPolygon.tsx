@@ -1,25 +1,47 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Line, Circle } from 'react-konva';
+import { Line, Circle, Text } from 'react-konva';
 import { Polygon, Tool } from '../types';
 import PreviewPoint from './PreviewPoint';
 import { MousePositionContext, ClickListenersContext } from '../contexts/mouse';
 import { useDispatch } from '../store';
 import { addPolygon } from '../store/polygonsSlice';
+import usePointsForSnapping from '../hooks/usePointsForSnapping';
+import { renderSnapLines, snapPosition } from '../utils/snapPosition';
 
 interface PreviewPolygonProps {
   tool: Tool;
 }
 
+function useRendersPerSecond() {
+  const timestamps = useRef<number[]>([]);
+  const now = Date.now();
+  timestamps.current.push(now);
+  while (timestamps.current.length > 0 && timestamps.current[0] < now - 1000) {
+    timestamps.current.shift();
+  }
+  return timestamps.current.length;
+}
+
 const PreviewPolygon: React.FC<PreviewPolygonProps> = ({ tool }) => {
-  const mousePosition = useContext(MousePositionContext);
+  let mousePosition = useContext(MousePositionContext);
   const clickListeners = useContext(ClickListenersContext);
   const dispatch = useDispatch();
   const [points, setPoints] = useState<number[][]>([]);
+  const snappingPoints = usePointsForSnapping(null, null, points);
+  const { snapped, snapLines } = snapPosition(mousePosition, snappingPoints) ?? {};
+  mousePosition = snapped ?? mousePosition;
+  const rendersPerSecond = useRendersPerSecond();
+
   const isHoveringFirstNode = 
     points.length > 2 && 
     mousePosition &&
     Math.abs(points[0][0] - mousePosition.x) < 10 &&
     Math.abs(points[0][1] - mousePosition.y) < 10;
+
+  if (isHoveringFirstNode) {
+    mousePosition = { x: points[0][0], y: points[0][1] };
+  }
+
   const handlePolygonClose = () => {
     if (points.length > 1) {
       let newPolygon: Polygon;
@@ -61,6 +83,7 @@ const PreviewPolygon: React.FC<PreviewPolygonProps> = ({ tool }) => {
 
   return (
     <>
+      <Text text={`${rendersPerSecond} FPS`} />
       {mousePosition && <PreviewPoint x={mousePosition.x} y={mousePosition.y} />}
       <Line
         points={points.flat()}
@@ -97,6 +120,7 @@ const PreviewPolygon: React.FC<PreviewPolygonProps> = ({ tool }) => {
           }}
         />
       )}
+      {snapLines && renderSnapLines(snapLines)}
     </>
   );
 };

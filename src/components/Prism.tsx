@@ -18,6 +18,7 @@ interface PrismProps {
   description?: BuildingDescription;
   entries: Entry[];
   handleDescriptionDrag: (newOffset: { offsetX: number; offsetY: number }) => void;
+  descriptionDraggable?: boolean;
 }
 
 const Prism: React.FC<PrismProps> = ({ 
@@ -31,7 +32,8 @@ const Prism: React.FC<PrismProps> = ({
   stageY,
   description,
   handleDescriptionDrag,
-  entries
+  entries,
+  descriptionDraggable,
 }) => {
   const mainPoints = basePoints;
   basePoints = expandBasePoints(basePoints);
@@ -158,6 +160,7 @@ const Prism: React.FC<PrismProps> = ({
           centerX={topProjected.reduce((sum, point) => sum + point[0], 0) / topProjected.length}
           centerY={topProjected.reduce((sum, point) => sum + point[1], 0) / topProjected.length}
           onDragMove={handleDescriptionDrag}
+          draggable={descriptionDraggable}
         />
       )}
       {entries && entries.map(entry => (

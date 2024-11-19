@@ -26,6 +26,10 @@ const slice = createSlice({
       state.selectedIndex = action.payload;
     },
 
+    unselect(state) {
+      state.selectedIndex = -1;
+    },
+
     updateNode(
       state,
       action: PayloadAction<{ nodeIndex: number; x: number; y: number }>
@@ -87,6 +91,7 @@ export default slice.reducer;
 export const {
   addPolygon,
   setSelected,
+  unselect,
   updateNode,
   movePolygon,
   toggleDescription,

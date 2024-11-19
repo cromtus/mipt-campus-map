@@ -8,13 +8,15 @@ interface DescriptionTextProps {
   centerX: number;
   centerY: number;
   onDragMove: (newOffset: { offsetX: number; offsetY: number }) => void;
+  draggable?: boolean;
 }
 
 const DescriptionText: React.FC<DescriptionTextProps> = ({ 
   description, 
   centerX, 
   centerY, 
-  onDragMove
+  onDragMove,
+  draggable,
 }) => {
   const { text, offsetX, offsetY, alignment } = description;
   const lines = text.split('\n');
@@ -24,7 +26,7 @@ const DescriptionText: React.FC<DescriptionTextProps> = ({
     <Group
       x={centerX + offsetX}
       y={centerY + offsetY}
-      draggable={true}
+      draggable={draggable}
       onDragMove={(e) => {
         const newOffsetX = e.target.x() - centerX;
         const newOffsetY = e.target.y() - centerY;

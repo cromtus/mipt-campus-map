@@ -1,3 +1,6 @@
+import React from 'react';
+import { Line } from 'react-konva';
+
 type SnapLine = {
   from: { x: number; y: number },
   to: { x: number; y: number }
@@ -5,7 +8,6 @@ type SnapLine = {
 
 export function snapPosition(
     endPoint: { x: number; y: number } | null,
-    isCtrlPressed: boolean,
     allPoints: number[][]
   ) {
     if (endPoint == null) {
@@ -16,24 +18,22 @@ export function snapPosition(
     let snappedY = endPoint.y;
     let snapLines: { x?: SnapLine, y?: SnapLine } = {};
 
-    if (isCtrlPressed) {
-      const snapThreshold = 3;
-      
-      for (const point of allPoints) {
-        if (Math.abs(point[0] - endPoint.x) < snapThreshold && (snapLines.x === undefined || Math.abs(point[1] - endPoint.y) < Math.abs(snapLines.x.from.y - snapLines.x.to.y))) {
-          snappedX = point[0];
-          snapLines.x = {
-            from: { x: point[0], y: point[1] },
-            to: { x: snappedX, y: endPoint.y }
-          };
-        }
-        if (Math.abs(point[1] - endPoint.y) < snapThreshold && (snapLines.y === undefined || Math.abs(point[0] - endPoint.x) < Math.abs(snapLines.y.from.x - snapLines.y.to.x))) {
-          snappedY = point[1];
-          snapLines.y = {
-            from: { x: point[0], y: point[1] },
-            to: { x: endPoint.x, y: snappedY }
-          };
-        }
+    const snapThreshold = 3;
+    
+    for (const point of allPoints) {
+      if (Math.abs(point[0] - endPoint.x) < snapThreshold && (snapLines.x === undefined || Math.abs(point[1] - endPoint.y) < Math.abs(snapLines.x.from.y - snapLines.x.to.y))) {
+        snappedX = point[0];
+        snapLines.x = {
+          from: { x: point[0], y: point[1] },
+          to: { x: snappedX, y: endPoint.y }
+        };
+      }
+      if (Math.abs(point[1] - endPoint.y) < snapThreshold && (snapLines.y === undefined || Math.abs(point[0] - endPoint.x) < Math.abs(snapLines.y.from.x - snapLines.y.to.x))) {
+        snappedY = point[1];
+        snapLines.y = {
+          from: { x: point[0], y: point[1] },
+          to: { x: endPoint.x, y: snappedY }
+        };
       }
     }
 
@@ -49,3 +49,18 @@ export function snapPosition(
       snapLines: Object.values(snapLines)
     };
   }
+
+export function renderSnapLines(snapLines: SnapLine[]) {
+  return (
+    React.createElement(React.Fragment, {},
+      snapLines.map((line, index) => (
+        React.createElement(Line, {
+          key: index,
+          points: [line.from.x, line.from.y, line.to.x, line.to.y],
+          stroke: 'red',
+          strokeWidth: 1,
+        })
+      ))
+    )
+  );
+}

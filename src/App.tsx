@@ -1,13 +1,9 @@
-import React, { useState, useRef, useMemo, useCallback, createContext } from 'react';
+import React, { useState, useRef, useMemo, useCallback, } from 'react';
 import { Stage, Layer, Group, Line, Rect as Rectangle, Text } from 'react-konva';
-import { Updater } from 'use-immer';
 import { useGesture } from '@use-gesture/react';
 import ToolPanel from './components/ToolPanel';
-import PolygonComponent from './components/Polygon';
-import PreviewPolygon from './components/PreviewPolygon';
-import InteractivePolygon from './components/interactive/Polygon';
 import PropertiesPanel from './components/PropertiesPanel';
-import { Tool, Graph, GraphNode, GraphEdge, Polygon, Rect as RectType } from './types';
+import { Tool, Graph, GraphNode, GraphEdge, Rect as RectType } from './types';
 import { snapPosition } from './utils/snapPosition';
 import GraphEdgeComponent from './components/GraphEdge';
 import GraphNodeComponent from './components/GraphNode';
@@ -125,7 +121,7 @@ const App: React.FC = () => {
     }
     return emptyList
   }, [/*polygons, */graph, /*currentPolygon,*/ draggingGraphNode, tool])
-  const snappedInfo = snapPosition(mousePosition, isCtrlPressed, allPoints);
+  const snappedInfo = snapPosition(mousePosition, allPoints);
   const snappedMousePosition = snappedInfo?.snapped
 
   // Map state
@@ -272,11 +268,17 @@ const App: React.FC = () => {
   }, new Map<string, GraphNode>()), [graph.nodes]);
 
   const selectedEdge = selectedEdgeId != null ? graph.edges.find(e => e.id === selectedEdgeId) : null
+
+  const canvasPointerClass = (
+    tool === 'pan' ? 'pan-tool' :
+    tool === 'select' ? 'select-tool' :
+    'drawing-tool'
+  )
   return (
     <div className="app">
       <Provider store={store}>
       <div 
-        className={`canvas-container ${tool === 'building' ? 'polygon-tool' : ''} ${tool === 'select' ? 'select-tool' : ''}`}
+        className={`canvas-container ${canvasPointerClass}`}
         {...bind()}
       >
         <Stage
@@ -410,12 +412,6 @@ const edgesCompareFn = (a: GraphEdge, b: GraphEdge) => {
   if (b.type === 'pathwalk') return -1;
   return 0;
 }
-
-function getAllPolygonPoints(polygons: Polygon[], excludePolygonIndex: number | null = null, excludeNodeIndex: number | null = null): number[][] {
-  return polygons.flatMap((polygon, index) => polygon.points.filter((_, nodeIndex) => 
-    index !== excludePolygonIndex || nodeIndex !== excludeNodeIndex
-  ));
-};
 
 function getAllGraphPoints(nodes: GraphNode[], excludeNodeId: string | null = null): number[][] {
   return nodes.filter(node => node.id !== excludeNodeId).map(node => [node.x, node.y]);

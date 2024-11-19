@@ -19,12 +19,7 @@ const Polygon: React.FC<PolygonProps> = ({
   index,
 }) => {
   const dispatch = useDispatch();
-  // const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setHovered] = useState(false);
-
-  // const handlePolygonDragStart = () => {
-  //   setIsDragging(true);
-  // };
 
   const handlePolygonDragEnd = (e: any) => {
     const node = e.target;
@@ -59,6 +54,7 @@ const Polygon: React.FC<PolygonProps> = ({
       stageX={centerDot.x}
       stageY={centerDot.y}
       entries={polygon.entries}
+      descriptionDraggable={hoverable}
     />
   ) : null
 
@@ -74,7 +70,6 @@ const Polygon: React.FC<PolygonProps> = ({
         fill={fill}
         strokeWidth={strokeWidth || (isHovered ? 3 : 2)}
         draggable={hoverable}
-        // onDragStart={handlePolygonDragStart}
         onDragEnd={handlePolygonDragEnd}
         onMouseEnter={() => hoverable && setHovered(true)}
         onMouseLeave={() => hoverable && setHovered(false)}

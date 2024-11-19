@@ -16,12 +16,16 @@ body {
     touch-action: none;
 }
 
-.canvas-container.polygon-tool {
+.canvas-container.drawing-tool {
     cursor: crosshair;
 }
 
 .canvas-container.select-tool {
     cursor: pointer;
+}
+
+.canvas-container.pan-tool {
+    cursor: grab;
 }
 
 .tool-panel {
