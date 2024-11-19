@@ -1,21 +1,67 @@
-import React from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Line, Circle } from 'react-konva';
+import { Polygon, Tool } from '../types';
+import PreviewPoint from './PreviewPoint';
+import { MousePositionContext, ClickListenersContext } from '../contexts/mouse';
+import { useDispatch } from '../store';
+import { addPolygon } from '../store/polygonsSlice';
 
 interface PreviewPolygonProps {
-  points: number[][];
-  mousePosition?: { x: number; y: number };
-  onClose: () => void;
+  tool: Tool;
 }
 
-const PreviewPolygon: React.FC<PreviewPolygonProps> = ({ points, mousePosition, onClose }) => {
+const PreviewPolygon: React.FC<PreviewPolygonProps> = ({ tool }) => {
+  const mousePosition = useContext(MousePositionContext);
+  const clickListeners = useContext(ClickListenersContext);
+  const dispatch = useDispatch();
+  const [points, setPoints] = useState<number[][]>([]);
   const isHoveringFirstNode = 
     points.length > 2 && 
     mousePosition &&
     Math.abs(points[0][0] - mousePosition.x) < 10 &&
     Math.abs(points[0][1] - mousePosition.y) < 10;
+  const handlePolygonClose = () => {
+    if (points.length > 1) {
+      let newPolygon: Polygon;
+      switch (tool) {
+        case 'building':
+          newPolygon = {
+            points: points, 
+            type: 'building', 
+            height: 100, 
+            color: '#000000',
+            entries: [],
+          };
+          break;
+        case 'pavement':
+          newPolygon = {
+            points: points, 
+            type: 'pavement' 
+          };
+          break;
+        default:
+          return;
+      }
+      dispatch(addPolygon(newPolygon));
+      setPoints([]);
+    }
+  };
+
+  const handleNodeAdd = useCallback(() => {
+    const newPoint = [mousePosition!.x, mousePosition!.y];
+    setPoints([...points, newPoint]);
+  }, [mousePosition]);
+
+  useEffect(() => {
+    clickListeners.current.push(handleNodeAdd);
+    return () => {
+      clickListeners.current = clickListeners.current.filter(listener => listener !== handleNodeAdd);
+    };
+  }, [mousePosition]);
 
   return (
     <>
+      {mousePosition && <PreviewPoint x={mousePosition.x} y={mousePosition.y} />}
       <Line
         points={points.flat()}
         stroke="black"
@@ -45,7 +91,10 @@ const PreviewPolygon: React.FC<PreviewPolygonProps> = ({ points, mousePosition, 
           radius={10}
           fill="yellow"
           opacity={0.5}
-          onClick={onClose}
+          onClick={e => {
+            e.cancelBubble = true;
+            handlePolygonClose();
+          }}
         />
       )}
     </>

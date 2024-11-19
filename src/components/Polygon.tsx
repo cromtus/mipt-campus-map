@@ -2,72 +2,46 @@ import React, { useState } from 'react';
 import { Line, Circle } from 'react-konva';
 import Prism from './Prism';
 import { Polygon as PolygonType } from '../types';
+import { useDispatch } from '../store';
+import { movePolygon, setSelected, updateDescriptionOffset } from '../store/polygonsSlice';
 
 interface PolygonProps {
   polygon: PolygonType;
+  index: number;
   centerDot: { x: number, y: number };
-  interactive: boolean;
-  isSelected: boolean;
-  onSelect: () => void;
-  onNodeDrag: (index: number, newPosition: number[]) => number[] | undefined;
-  onPolygonDrag: (newPositions: number[][]) => void;
-  onDescriptionDrag: (newOffset: { offsetX: number; offsetY: number }) => void;
-  onDragStart: (nodeIndex: number) => void;
-  onDragEnd: (nodeIndex: number) => void;
+  hoverable: boolean;
 }
 
 const Polygon: React.FC<PolygonProps> = ({
   polygon,
   centerDot,
-  interactive,
-  isSelected,
-  onSelect,
-  onNodeDrag,
-  onPolygonDrag,
-  onDescriptionDrag,
-  onDragStart,
-  onDragEnd,
+  hoverable,
+  index,
 }) => {
-  const [isDragging, setIsDragging] = useState(false);
+  const dispatch = useDispatch();
+  // const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setHovered] = useState(false);
 
-  const handlePolygonDragStart = () => {
-    setIsDragging(true);
-  };
+  // const handlePolygonDragStart = () => {
+  //   setIsDragging(true);
+  // };
 
   const handlePolygonDragEnd = (e: any) => {
-    setIsDragging(false);
     const node = e.target;
-    const dx = node.x();
-    const dy = node.y();
-    
-    const newPositions = polygon.points.map(point => [
-      point[0] + dx,
-      point[1] + dy
-    ]);
-    
-    onPolygonDrag(newPositions);
+    dispatch(movePolygon({ index, dx: node.x(), dy: node.y() }));
     node.position({ x: 0, y: 0 });
-  };
-
-  const handleNodeDragMove = (index: number) => (e: any) => {
-    const node = e.target;
-    const newPosition = [node.x(), node.y()];
-    const finalPosition = onNodeDrag(index, newPosition) ?? newPosition;
-    node.x(finalPosition[0]);
-    node.y(finalPosition[1]);
   };
 
   const getColors = () => {
     if (polygon.type === 'pavement') {
       return {
-        fill: isSelected ? 'rgb(122, 122, 112)' : isHovered ? 'rgb(183, 183, 168)' : 'rgb(245, 245, 224)', // Light yellow
+        fill: isHovered ? 'rgb(183, 183, 168)' : 'rgb(245, 245, 224)', // Light yellow
       };
     } else {
       return {
-        stroke: isSelected ? "blue" : isHovered ? "black" : undefined,
-        strokeWidth: isSelected || isHovered ? 3 : 0,
-        fill: isSelected ? "rgba(0, 0, 255, 0.1)" : isHovered ? "rgba(0, 255, 0, 0.1)" : undefined
+        stroke: isHovered ? "black" : undefined,
+        strokeWidth: isHovered ? 3 : 0,
+        fill: isHovered ? "rgba(0, 255, 0, 0.1)" : undefined
       };
     }
   };
@@ -79,7 +53,7 @@ const Polygon: React.FC<PolygonProps> = ({
       color={polygon.color}
       secondaryColor={polygon.secondaryColor}
       description={polygon.description}
-      handleDescriptionDrag={(newOffset) => onDescriptionDrag(newOffset)}
+      handleDescriptionDrag={(newOffset) => dispatch(updateDescriptionOffset(newOffset.offsetX, newOffset.offsetY))}
       canvasWidth={window.innerWidth}
       canvasHeight={window.innerHeight}
       stageX={centerDot.x}
@@ -98,32 +72,19 @@ const Polygon: React.FC<PolygonProps> = ({
         closed={true}
         stroke={stroke}
         fill={fill}
-        strokeWidth={strokeWidth || (isSelected || isHovered ? 3 : 2)}
-        draggable={isSelected}
-        onDragStart={handlePolygonDragStart}
+        strokeWidth={strokeWidth || (isHovered ? 3 : 2)}
+        draggable={hoverable}
+        // onDragStart={handlePolygonDragStart}
         onDragEnd={handlePolygonDragEnd}
-        onMouseEnter={() => interactive && setHovered(true)}
-        onMouseLeave={() => interactive && setHovered(false)}
+        onMouseEnter={() => hoverable && setHovered(true)}
+        onMouseLeave={() => hoverable && setHovered(false)}
         onClick={(e) => {
-          if (interactive) {
+          if (hoverable) {
             e.cancelBubble = true
-            onSelect()
+            dispatch(setSelected(index))
           }
         }}
       />
-      {isSelected && !isDragging && polygon.points.map((point, index) => (
-        <Circle
-          key={index}
-          x={point[0]}
-          y={point[1]}
-          radius={6}
-          fill="red"
-          draggable
-          onDragMove={handleNodeDragMove(index)}
-          onDragStart={() => onDragStart(index)}
-          onDragEnd={() => onDragEnd(index)}
-        />
-      ))}
     </>
   );
 };

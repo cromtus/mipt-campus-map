@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 
 interface UseKeyboardProps {
   onDelete?: () => void;
-  onCancelEdge?: () => void;
+  onCancel?: () => void;
 }
 
-export const useKeyboard = ({ onDelete, onCancelEdge }: UseKeyboardProps = {}) => {
+export const useKeyboard = ({ onDelete, onCancel }: UseKeyboardProps = {}) => {
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
 
   useEffect(() => {
@@ -14,8 +14,8 @@ export const useKeyboard = ({ onDelete, onCancelEdge }: UseKeyboardProps = {}) =
       if (e.key === 'Delete' && onDelete) {
         onDelete();
       }
-      if (e.key === 'c' && onCancelEdge) {
-        onCancelEdge();
+      if (e.key === 'c' && onCancel) {
+        onCancel();
       }
     };
 
@@ -30,7 +30,7 @@ export const useKeyboard = ({ onDelete, onCancelEdge }: UseKeyboardProps = {}) =
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [onDelete, onCancelEdge]);
+  }, [onDelete, onCancel]);
 
   return { isCtrlPressed };
 };

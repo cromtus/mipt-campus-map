@@ -1,9 +1,11 @@
-import React, { useState, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useMemo, useCallback, createContext } from 'react';
 import { Stage, Layer, Group, Line, Rect as Rectangle, Text } from 'react-konva';
+import { Updater } from 'use-immer';
 import { useGesture } from '@use-gesture/react';
 import ToolPanel from './components/ToolPanel';
 import PolygonComponent from './components/Polygon';
 import PreviewPolygon from './components/PreviewPolygon';
+import InteractivePolygon from './components/interactive/Polygon';
 import PropertiesPanel from './components/PropertiesPanel';
 import { Tool, Graph, GraphNode, GraphEdge, Polygon, Rect as RectType } from './types';
 import { snapPosition } from './utils/snapPosition';
@@ -11,7 +13,6 @@ import GraphEdgeComponent from './components/GraphEdge';
 import GraphNodeComponent from './components/GraphNode';
 import EdgePropertiesPanel from './components/EdgePropertiesPanel';
 import PreviewEdge from './components/PreviewEdge';
-import PreviewPoint from './components/PreviewPoint';
 import TwoDegreeNodes from './components/TwoDegreeNodes';
 import { Barriers } from './components/Barriers';
 import YouAreHere from './components/YouAreHere';
@@ -22,7 +23,10 @@ import { exportJSON, exportPDF } from './utils/export';
 import { useKeyboard } from './hooks/useKeyboard';
 import { emptyList } from './utils/constants';
 import useWindowSize from './hooks/useWindowSize';
-
+import { MousePositionContext, ClickListenersContext } from './contexts/mouse';
+import Polygons from './components/Polygons';
+import { Provider } from 'react-redux';
+import { store } from './store';
 
 const App: React.FC = () => {
   const [tool, setTool] = useState<Tool>('pan');
@@ -36,75 +40,7 @@ const App: React.FC = () => {
     stageRef.current?.width(window.innerWidth);
     stageRef.current?.height(window.innerHeight);
   })
-
-  const [polygons, setPolygons] = useLocalStorage<Polygon[]>('polygons', []);
-  const [currentPolygon, setCurrentPolygon] = useState<number[][]>([]);
-  const [draggingPolygonNode, setDraggingPolygonNode] = useState<{ polygonIndex: number, nodeIndex: number } | null>(null);
-  const [selectedPolygonIndex, setSelectedPolygonIndex] = useState<number | null>(null);
-  const handlePolygonChange = (updatedPolygon: Polygon) => {
-    if (selectedPolygonIndex !== null) {
-      setPolygons(prevPolygons => {
-        prevPolygons[selectedPolygonIndex] = updatedPolygon;
-      });
-    }
-  };
-  const handlePolygonDrag = (polygonIndex: number, newPositions: number[][]) => {
-    setPolygons(draft => {
-      draft[polygonIndex].points = newPositions;
-    });
-  };
-  const handleDeletePolygon = useCallback(() => {
-    if (selectedPolygonIndex !== null) {
-      setPolygons(prevPolygons => prevPolygons.filter((_, index) => index !== selectedPolygonIndex));
-      setSelectedPolygonIndex(null);
-    }
-  }, [selectedPolygonIndex]);
-  const handlePolygonClose = () => {
-    if (currentPolygon.length > 1) {
-      let newPolygon: Polygon;
-      switch (tool) {
-        case 'building':
-          newPolygon = {
-            points: currentPolygon, 
-            type: 'building', 
-            height: 100, 
-            color: '#000000',
-            entries: [],
-          };
-          break;
-        case 'pavement':
-          newPolygon = {
-            points: currentPolygon, 
-            type: 'pavement' 
-          };
-          break;
-        default:
-          return;
-      }
-      setPolygons(draft => {
-        draft.push(newPolygon);
-      });
-      setCurrentPolygon([]);
-    }
-  };
-  const handleDescriptionDrag = (polygonIndex: number, newOffset: { offsetX: number; offsetY: number }) => {
-    setPolygons(draft => {
-      const polygon = draft[polygonIndex];
-      if (polygon.type === 'building' && polygon.description) {
-        polygon.description.offsetX = newOffset.offsetX;
-        polygon.description.offsetY = newOffset.offsetY;
-      }
-    });
-  };
-  const handleNodeDrag = (polygonIndex: number, nodeIndex: number) => {
-    if (!snappedMousePosition) return;
-    
-    setPolygons(draft => {
-      draft[polygonIndex].points[nodeIndex] = [snappedMousePosition.x, snappedMousePosition.y];
-    });
-    
-    return [snappedMousePosition.x, snappedMousePosition.y];
-  };
+  const clickListeners = useRef<(() => void)[]>([]);
 
   const [graph, setGraph] = useLocalStorage<Graph>('graph', { nodes: [], edges: [] });
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -160,10 +96,9 @@ const App: React.FC = () => {
   };
 
   const handleDelete = useCallback(() => {
-    handleDeletePolygon();
     handleDeleteEdge();
     handleDeleteRect();
-  }, [handleDeletePolygon, handleDeleteEdge, handleDeleteRect]);
+  }, [handleDeleteEdge, handleDeleteRect]);
 
   const handleCancelEdge = useCallback(() => {
     setIsDrawingEdge(false);
@@ -172,24 +107,24 @@ const App: React.FC = () => {
 
   const { isCtrlPressed } = useKeyboard({
     onDelete: handleDelete,
-    onCancelEdge: handleCancelEdge,
+    onCancel: handleCancelEdge,
   });
 
   const allPoints = useMemo(() => {
     if (tool === 'building' || tool === 'pavement') {
-      return getAllPolygonPoints(polygons).concat(currentPolygon);
+      // return getAllPolygonPoints(polygons)//.concat(currentPolygon);
     } else if (tool === 'pathwalk' || tool === 'road' || tool === 'fence') {
       return getAllGraphPoints(graph.nodes)
     } else {
-      if (draggingPolygonNode) {
-        return getAllPolygonPoints(polygons, draggingPolygonNode.polygonIndex, draggingPolygonNode.nodeIndex)
-      }
+      // if (draggingPolygonNode) {
+      //   return getAllPolygonPoints(polygons, draggingPolygonNode.polygonIndex, draggingPolygonNode.nodeIndex)
+      // }
       if (draggingGraphNode) {
         return getAllGraphPoints(graph.nodes, draggingGraphNode.id)
       }
     }
     return emptyList
-  }, [polygons, graph, currentPolygon, draggingGraphNode, draggingPolygonNode, tool])
+  }, [/*polygons, */graph, /*currentPolygon,*/ draggingGraphNode, tool])
   const snappedInfo = snapPosition(mousePosition, isCtrlPressed, allPoints);
   const snappedMousePosition = snappedInfo?.snapped
 
@@ -238,20 +173,9 @@ const App: React.FC = () => {
   });
 
   const handleStageClick = (e: any) => {
+    clickListeners.current.forEach(listener => listener());
     if (tool === 'building' || tool === 'pavement') {
-      const newPoint = [snappedMousePosition!.x, snappedMousePosition!.y];
-  
-      if (currentPolygon.length > 2 && 
-        Math.abs(currentPolygon[0][0] - newPoint[0]) < 10 &&
-        Math.abs(currentPolygon[0][1] - newPoint[1]) < 10) {
-        // Close the polygon for building and pavement
-        handlePolygonClose();
-      } else {
-        setCurrentPolygon([...currentPolygon, newPoint]);
-      }
-
     } else if (tool === 'select') {
-      setSelectedPolygonIndex(null)
       setSelectedEdgeId(null)
       setSelectedNodeId(null)
       setSelectedRectIndex(null);
@@ -299,7 +223,6 @@ const App: React.FC = () => {
   const handleToolChange = (newTool: Tool) => {
     setTool(newTool);
     if (newTool !== 'select') {
-      setSelectedPolygonIndex(null);
       setSelectedEdgeId(null);
       setSelectedNodeId(null);
       setSelectedRectIndex(null);
@@ -343,18 +266,6 @@ const App: React.FC = () => {
     setDrawingRect(null);
   };
 
-  const renderPreviewPoint = () => {
-    if ((tool !== 'select' && tool !== 'pan') && snappedMousePosition) {
-      return (
-        <PreviewPoint
-          x={snappedMousePosition.x}
-          y={snappedMousePosition.y}
-        />
-      );
-    }
-    return null;
-  };
-
   const nodeById = useMemo(() => graph.nodes.reduce((acc, node) => {
     acc.set(node.id, node);
     return acc;
@@ -363,6 +274,7 @@ const App: React.FC = () => {
   const selectedEdge = selectedEdgeId != null ? graph.edges.find(e => e.id === selectedEdgeId) : null
   return (
     <div className="app">
+      <Provider store={store}>
       <div 
         className={`canvas-container ${tool === 'building' ? 'polygon-tool' : ''} ${tool === 'select' ? 'select-tool' : ''}`}
         {...bind()}
@@ -381,10 +293,11 @@ const App: React.FC = () => {
           x={position.x}
           y={position.y}
         >
+          <ClickListenersContext.Provider value={clickListeners}>
+          <MousePositionContext.Provider value={mousePosition}>
           <Layer>
             <Group>
               <Rectangle x={-5000} y={-5000} width={10000} height={10000} fill="#e8f7e8" />
-              {renderPreviewPoint()}
               {[...graph.edges].sort(edgesCompareFn).map(edge => (
                 <GraphEdgeComponent
                   key={edge.id}
@@ -410,28 +323,7 @@ const App: React.FC = () => {
                   onChange={(updatedRect) => handleRectChange(index, updatedRect)}
                 />
               ))}
-              {[...polygons.map((poly, index) => ({ ...poly, index }))].sort(polygonsCompareFn(centerDot)).map(poly => (
-                <PolygonComponent
-                  key={poly.index}
-                  polygon={poly}
-                  centerDot={centerDot}
-                  interactive={tool === 'select'}
-                  isSelected={poly.index === selectedPolygonIndex}
-                  onSelect={() => setSelectedPolygonIndex(poly.index)}
-                  onNodeDrag={(nodeIndex) => handleNodeDrag(poly.index, nodeIndex)}
-                  onPolygonDrag={(newPositions) => handlePolygonDrag(poly.index, newPositions)}
-                  onDescriptionDrag={(newOffset) => handleDescriptionDrag(poly.index, newOffset)}
-                  onDragStart={(nodeIndex) => setDraggingPolygonNode({ polygonIndex: poly.index, nodeIndex })}
-                  onDragEnd={() => setDraggingPolygonNode(null)}
-                />
-              ))}
-              {(tool === 'building' || tool === 'pavement') && (
-                <PreviewPolygon 
-                  points={currentPolygon} 
-                  mousePosition={snappedMousePosition}
-                  onClose={handlePolygonClose}
-                />
-              )}
+              <Polygons centerDot={centerDot} tool={tool} />
               {previewEdge && snappedMousePosition && (tool === 'pathwalk' || tool === 'road' || tool === 'fence') && (
                 <PreviewEdge
                   from={previewEdge.from}
@@ -477,19 +369,12 @@ const App: React.FC = () => {
             </Group>
             <YouAreHere x={centerDot.x} y={centerDot.y} handleDotDrag={handleDotDrag} />
           </Layer>
+        </MousePositionContext.Provider>
+        </ClickListenersContext.Provider>
         </Stage>
       </div>
       <ToolPanel activeTool={tool} onToolChange={handleToolChange} />
-      {selectedPolygonIndex !== null && (
-        <>
-          {polygons[selectedPolygonIndex].type === 'building' && (
-            <PropertiesPanel
-              selectedPolygon={polygons[selectedPolygonIndex]}
-              onPolygonChange={handlePolygonChange}
-            />
-          )}
-        </>
-      )}
+      <PropertiesPanel />
       {selectedEdge?.type === 'road' && (
         <EdgePropertiesPanel
           edgeWidth={selectedEdge.width}
@@ -511,27 +396,12 @@ const App: React.FC = () => {
         <button className="download-button" onClick={() => exportPDF(stageRef.current)}>Download PDF</button>
         <button className="download-button" onClick={() => exportJSON()}>Export JSON</button>
       </div>
+      </Provider>
     </div>
   );
 };
 
 export default App;
-
-const polygonsCompareFn = (centerDot: { x: number; y: number }) => (a: Polygon, b: Polygon) => {
-  if (a.type === 'pavement') return -1;
-  if (b.type === 'pavement') return 1;
-  // Sort buildings by distance from centerDot to the nearest polygon node
-  if (a.type === 'building' && b.type === 'building') {
-    const aDistance = Math.min(...a.points.map(point => 
-      Math.sqrt(Math.pow(point[0] - centerDot.x, 2) + Math.pow(point[1] - centerDot.y, 2))
-    ));
-    const bDistance = Math.min(...b.points.map(point => 
-      Math.sqrt(Math.pow(point[0] - centerDot.x, 2) + Math.pow(point[1] - centerDot.y, 2))
-    ));
-    return bDistance - aDistance; // Sort in descending order (furthest first)
-  }
-  return 0;
-}
 
 const edgesCompareFn = (a: GraphEdge, b: GraphEdge) => {
   if (a.type === 'road') return 1;
