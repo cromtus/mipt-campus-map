@@ -1,7 +1,7 @@
 import React from 'react';
-import './PropertiesPanel.css';
-import { useDispatch, useSelector } from '../store';
-import { addEntry, removeEntry, selectCurrentPolygon, toggleDescription, updateColor, updateDescriptionAlignment, updateDescriptionReversed, updateDescriptionText, updateEntry, updateHeight, updateSecondaryColor } from '../store/polygonsSlice';
+import './PolygonPropertiesPanel.css';
+import { useDispatch, useSelector } from '../../store';
+import { addEntry, removeEntry, selectCurrentPolygon, toggleDescription, updateColor, updateDescriptionAlignment, updateDescriptionReversed, updateDescriptionText, updateEntry, updateHeight, updateSecondaryColor } from '../../store/polygonsSlice';
 
 
 const PropertiesPanel: React.FC = () => {

@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo, useCallback, } from 'react';
 import { Stage, Layer, Group, Line, Rect as Rectangle, Text } from 'react-konva';
 import { useGesture } from '@use-gesture/react';
 import ToolPanel from './components/ToolPanel';
-import PropertiesPanel from './components/PropertiesPanel';
+import PropertiesPanel from './components/properties/PolygonPropertiesPanel';
 import { Tool, Graph, GraphNode, GraphEdge, Rect as RectType } from './types';
 import { snapPosition } from './utils/snapPosition';
 import GraphEdgeComponent from './components/GraphEdge';
@@ -20,7 +20,7 @@ import { useKeyboard } from './hooks/useKeyboard';
 import { emptyList } from './utils/constants';
 import useWindowSize from './hooks/useWindowSize';
 import { MousePositionContext, ClickListenersContext } from './contexts/mouse';
-import Polygons from './components/Polygons';
+import PolygonsLayer from './components/layers/PolygonsLayer';
 import { Provider } from 'react-redux';
 import { store } from './store';
 
@@ -325,7 +325,7 @@ const App: React.FC = () => {
                   onChange={(updatedRect) => handleRectChange(index, updatedRect)}
                 />
               ))}
-              <Polygons centerDot={centerDot} tool={tool} />
+              <PolygonsLayer centerDot={centerDot} tool={tool} />
               {previewEdge && snappedMousePosition && (tool === 'pathwalk' || tool === 'road' || tool === 'fence') && (
                 <PreviewEdge
                   from={previewEdge.from}

@@ -1,14 +1,14 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Line, Circle, Text } from 'react-konva';
-import { Polygon, Tool } from '../types';
+import { Polygon, Tool } from '../../types';
 import PreviewPoint from './PreviewPoint';
-import { MousePositionContext, ClickListenersContext } from '../contexts/mouse';
-import { useDispatch } from '../store';
-import { addPolygon } from '../store/polygonsSlice';
-import usePointsForSnapping from '../hooks/usePointsForSnapping';
-import { renderSnapLines, snapPosition } from '../utils/snapPosition';
+import { MousePositionContext, ClickListenersContext } from '../../contexts/mouse';
+import { useDispatch } from '../../store';
+import { addPolygon } from '../../store/polygonsSlice';
+import usePointsForSnapping from '../../hooks/usePointsForSnapping';
+import { renderSnapLines, snapPosition } from '../../utils/snapPosition';
 
-interface PreviewPolygonProps {
+interface PolygonPreviewProps {
   tool: Tool;
 }
 
@@ -22,7 +22,7 @@ function useRendersPerSecond() {
   return timestamps.current.length;
 }
 
-const PreviewPolygon: React.FC<PreviewPolygonProps> = ({ tool }) => {
+const PolygonPreview: React.FC<PolygonPreviewProps> = ({ tool }) => {
   let mousePosition = useContext(MousePositionContext);
   const clickListeners = useContext(ClickListenersContext);
   const dispatch = useDispatch();
@@ -99,13 +99,7 @@ const PreviewPolygon: React.FC<PreviewPolygonProps> = ({ tool }) => {
         />
       )}
       {points.map((point, index) => (
-        <Circle
-          key={index}
-          x={point[0]}
-          y={point[1]}
-          radius={4}
-          fill="black"
-        />
+        <Circle key={index} x={point[0]} y={point[1]} radius={4} fill="black" />
       ))}
       {isHoveringFirstNode && (
         <Circle
@@ -125,4 +119,4 @@ const PreviewPolygon: React.FC<PreviewPolygonProps> = ({ tool }) => {
   );
 };
 
-export default PreviewPolygon;
+export default PolygonPreview;

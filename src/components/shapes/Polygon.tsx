@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Line, Circle } from 'react-konva';
+import { Line } from 'react-konva';
 import Prism from './Prism';
-import { Polygon as PolygonType } from '../types';
-import { useDispatch } from '../store';
-import { movePolygon, setSelected, updateDescriptionOffset } from '../store/polygonsSlice';
+import { Polygon as PolygonType } from '../../types';
+import { useDispatch } from '../../store';
+import { movePolygon, setSelected, updateDescriptionOffset } from '../../store/polygonsSlice';
+import DescriptionText from './DescriptionText';
 
 interface PolygonProps {
   polygon: PolygonType;
@@ -47,16 +48,29 @@ const Polygon: React.FC<PolygonProps> = ({
       height={polygon.height}
       color={polygon.color}
       secondaryColor={polygon.secondaryColor}
-      description={polygon.description}
-      handleDescriptionDrag={(newOffset) => dispatch(updateDescriptionOffset(newOffset.offsetX, newOffset.offsetY))}
-      canvasWidth={window.innerWidth}
-      canvasHeight={window.innerHeight}
       stageX={centerDot.x}
       stageY={centerDot.y}
       entries={polygon.entries}
-      descriptionDraggable={hoverable}
     />
   ) : null
+  let description = null;
+  if (polygon.type === 'building' && polygon.description) {
+    const midpoint = polygon.points.reduce((acc, point) => {
+      return [acc[0] + point[0], acc[1] + point[1]];
+    }, [0, 0]).map(coord => coord / polygon.points.length) as [number, number];
+    description = (
+      <DescriptionText
+        description={polygon.description}
+        centerX={centerDot.x}
+        centerY={centerDot.y}
+        height={polygon.height}
+        x={midpoint[0]}
+        y={midpoint[1]}
+        onDragMove={(newOffset) => dispatch(updateDescriptionOffset(newOffset.offsetX, newOffset.offsetY))}
+        draggable={hoverable}
+      />
+    )
+  }
 
   const { stroke, fill, strokeWidth } = getColors();
 
@@ -80,6 +94,7 @@ const Polygon: React.FC<PolygonProps> = ({
           }
         }}
       />
+      {description}
     </>
   );
 };

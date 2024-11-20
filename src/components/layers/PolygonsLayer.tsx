@@ -1,9 +1,9 @@
 import React, { memo } from "react";
-import { Polygon, Tool } from "../types";
-import PolygonComponent from "./Polygon";
-import InteractivePolygon from "./interactive/Polygon";
-import PreviewPolygon from "./PreviewPolygon";
-import { useSelector } from "../store";
+import { Polygon, Tool } from "../../types";
+import PolygonComponent from "../shapes/Polygon";
+import InteractivePolygon from "../shapes/PolygonAnchors";
+import PolygonPreview from "../shapes/PolygonPreview";
+import { useSelector } from "../../store";
 
 
 interface PolygonsProps {
@@ -11,7 +11,7 @@ interface PolygonsProps {
   tool: Tool
 }
 
-const Polygons: React.FC<PolygonsProps> = memo(({ centerDot, tool }) => {
+const PolygonsLayer: React.FC<PolygonsProps> = memo(({ centerDot, tool }) => {
   const polygons = useSelector(state => state.polygons.polygons);
 
   return (
@@ -27,7 +27,7 @@ const Polygons: React.FC<PolygonsProps> = memo(({ centerDot, tool }) => {
       ))}
       <InteractivePolygon />
       {(tool === 'building' || tool === 'pavement') && (
-        <PreviewPolygon tool={tool} />
+        <PolygonPreview tool={tool} />
       )}
     </>
   )
@@ -49,4 +49,4 @@ const polygonsCompareFn = (centerDot: { x: number; y: number }) => (a: Polygon, 
   return 0;
 }
 
-export default memo(Polygons);
+export default memo(PolygonsLayer);

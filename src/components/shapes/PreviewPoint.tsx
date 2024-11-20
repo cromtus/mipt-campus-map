@@ -12,9 +12,7 @@ const PreviewPoint: React.FC<PreviewPointProps> = ({ x, y }) => {
       x={x}
       y={y}
       radius={4}
-      fill="rgba(255, 0, 0, 0.5)"
-      stroke="red"
-      strokeWidth={1}
+      fill="rgba(0, 0, 0, 0.3)"
     />
   );
 };

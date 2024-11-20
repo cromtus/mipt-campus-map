@@ -1,65 +1,42 @@
 import React, { useMemo } from 'react';
 import { Group, Line } from 'react-konva';
-import DescriptionText from './DescriptionText';
-import { BuildingDescription, Entry } from '../types';
-import EntryMarker from './EntryMarker';
+import {  Entry } from '../../types';
+import EntryMarker from '../EntryMarker';
 import { union } from '@turf/union';
 import { featureCollection, polygon } from '@turf/helpers';
+import { projectPoint } from '../../utils/geometry';
 
 interface PrismProps {
   basePoints: number[][];
   height: number;
   color: string;
   secondaryColor?: string;
-  canvasWidth: number;
-  canvasHeight: number;
   stageX: number;
   stageY: number;
-  description?: BuildingDescription;
   entries: Entry[];
-  handleDescriptionDrag: (newOffset: { offsetX: number; offsetY: number }) => void;
-  descriptionDraggable?: boolean;
 }
 
 const Prism: React.FC<PrismProps> = ({ 
   basePoints, 
   height, 
   color, 
-  secondaryColor, 
-  canvasWidth, 
-  canvasHeight, 
+  secondaryColor,
   stageX, 
   stageY,
-  description,
-  handleDescriptionDrag,
   entries,
-  descriptionDraggable,
 }) => {
   const mainPoints = basePoints;
   basePoints = expandBasePoints(basePoints);
 
-  // Use expandedBasePoints instead of basePoints for the rest of the component
-  const projectPoint = (x: number, y: number, z: number): [number, number] => {
-    const focalLength = Math.max(canvasWidth, canvasHeight);
-    
-    const adjustedX = x - stageX;
-    const adjustedY = y - stageY;
-    
-    const projectedX = (adjustedX * focalLength) / (focalLength - z);
-    const projectedY = (adjustedY * focalLength) / (focalLength - z);
-    
-    return [projectedX + stageX, projectedY + stageY];
-  };
-
   const baseProjected = basePoints;
   const topProjected = useMemo(
-    () => basePoints.map(point => projectPoint(point[0], point[1], height)),
-    [basePoints, height, projectPoint]
+    () => basePoints.map(point => projectPoint(point[0], point[1], height, stageX, stageY)),
+    [basePoints, height, stageX, stageY]
   );
 
   const mainProjected = useMemo(
-    () => mainPoints.map(point => projectPoint(point[0], point[1], height)),
-    [mainPoints, height, projectPoint]
+    () => mainPoints.map(point => projectPoint(point[0], point[1], height, stageX, stageY)),
+    [mainPoints, height, stageX, stageY]
   );
 
   const orientedArea = useMemo(() => basePoints.reduce((area, point, index) => {
@@ -154,15 +131,6 @@ const Prism: React.FC<PrismProps> = ({
         stroke={color}
         strokeWidth={thickerStrokeWidth}
       />
-      {description && (
-        <DescriptionText
-          description={description}
-          centerX={topProjected.reduce((sum, point) => sum + point[0], 0) / topProjected.length}
-          centerY={topProjected.reduce((sum, point) => sum + point[1], 0) / topProjected.length}
-          onDragMove={handleDescriptionDrag}
-          draggable={descriptionDraggable}
-        />
-      )}
       {entries && entries.map(entry => (
         <EntryMarker
           key={entry.id}

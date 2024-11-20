@@ -9,19 +9,19 @@ import { renderSnapLines } from "../../utils/snapPosition";
 import { snapPosition } from "../../utils/snapPosition";
 import { useOutsideClickListener } from "../../contexts/mouse";
 
-const Polygon: React.FC = () => {
+const PolygonAnchors: React.FC = () => {
   const polygon = useSelector(selectCurrentPolygon);
   const index = useSelector(state => state.polygons.selectedIndex);
   if (!polygon) return null;
-  return <PolygonInner polygon={polygon} index={index} />
+  return <PolygonAnchorsInner polygon={polygon} index={index} />
 }
 
-type PolygonInnerProps = {
+type PolygonAnchorsInnerProps = {
   polygon: PolygonType;
   index: number;
 }
 
-const PolygonInner: React.FC<PolygonInnerProps> = ({ polygon, index }) => {
+const PolygonAnchorsInner: React.FC<PolygonAnchorsInnerProps> = ({ polygon, index }) => {
   const dispatch = useDispatch();
   useKeyboard({ onDelete: () => dispatch(deletePolygon()) });
   const [ draggingNodeIndex, setDraggingNodeIndex ] = useState<number | null>(null);
@@ -65,4 +65,4 @@ const PolygonInner: React.FC<PolygonInnerProps> = ({ polygon, index }) => {
   )
 }
 
-export default Polygon;
+export default PolygonAnchors;

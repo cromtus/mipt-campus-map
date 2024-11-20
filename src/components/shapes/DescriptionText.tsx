@@ -1,35 +1,43 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Circle, Group, Text } from 'react-konva';
-import { BuildingDescription } from '../types';
+import { BuildingDescription } from '../../types';
 import Konva from 'konva';
+import { projectPoint } from '../../utils/geometry';
 
 interface DescriptionTextProps {
   description: BuildingDescription;
+  height: number;
   centerX: number;
   centerY: number;
+  x: number;
+  y: number;
   onDragMove: (newOffset: { offsetX: number; offsetY: number }) => void;
   draggable?: boolean;
 }
 
 const DescriptionText: React.FC<DescriptionTextProps> = ({ 
   description, 
-  centerX, 
-  centerY, 
+  height,
+  centerX,
+  centerY,
+  x: initialX,
+  y: initialY,
   onDragMove,
   draggable,
 }) => {
   const { text, offsetX, offsetY, alignment } = description;
   const lines = text.split('\n');
   const yMultiplier = description.reversed ? -1 : 1;
+  const [x, y] = projectPoint(initialX, initialY, height, centerX, centerY);
 
   return (
     <Group
-      x={centerX + offsetX}
-      y={centerY + offsetY}
+      x={x + offsetX}
+      y={y + offsetY}
       draggable={draggable}
       onDragMove={(e) => {
-        const newOffsetX = e.target.x() - centerX;
-        const newOffsetY = e.target.y() - centerY;
+        const newOffsetX = e.target.x() - x;
+        const newOffsetY = e.target.y() - y;
         onDragMove({ offsetX: newOffsetX, offsetY: newOffsetY });
       }}
     >

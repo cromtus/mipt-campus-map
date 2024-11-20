@@ -1,4 +1,5 @@
 import { GraphNode } from "../types";
+import { focalLength } from "./constants";
 
 export const getIntersection = (
     node1: GraphNode,
@@ -23,4 +24,14 @@ export const getIntersection = (
     const y = y1 + ua * (y2 - y1);
 
     return { x, y };
+};
+
+export const projectPoint = (x: number, y: number, z: number, centerX: number, centerY: number): [number, number] => {
+    const adjustedX = x - centerX;
+    const adjustedY = y - centerY;
+    
+    const projectedX = (adjustedX * focalLength) / (focalLength - z);
+    const projectedY = (adjustedY * focalLength) / (focalLength - z);
+    
+    return [projectedX + centerX, projectedY + centerY];
 };
