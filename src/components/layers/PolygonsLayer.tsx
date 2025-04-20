@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { Polygon, Tool } from "../../types";
 import PolygonComponent from "../shapes/Polygon";
-import InteractivePolygon from "../shapes/PolygonAnchors";
+import PolygonAnchors from "../shapes/PolygonAnchors";
 import PolygonPreview from "../shapes/PolygonPreview";
 import { useSelector } from "../../store";
 
@@ -25,7 +25,7 @@ const PolygonsLayer: React.FC<PolygonsProps> = memo(({ centerDot, tool }) => {
           hoverable={tool === 'select'}
         />
       ))}
-      <InteractivePolygon />
+      <PolygonAnchors />
       {(tool === 'building' || tool === 'pavement') && (
         <PolygonPreview tool={tool} />
       )}

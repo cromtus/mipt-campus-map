@@ -3,26 +3,19 @@ import { Stage, Layer, Group, Line, Rect as Rectangle, Text } from 'react-konva'
 import { useGesture } from '@use-gesture/react';
 import ToolPanel from './components/ToolPanel';
 import PropertiesPanel from './components/properties/PolygonPropertiesPanel';
-import { Tool, Graph, GraphNode, GraphEdge, Rect as RectType } from './types';
-import { snapPosition } from './utils/snapPosition';
-import GraphEdgeComponent from './components/GraphEdge';
-import GraphNodeComponent from './components/GraphNode';
-import EdgePropertiesPanel from './components/EdgePropertiesPanel';
-import PreviewEdge from './components/PreviewEdge';
-import TwoDegreeNodes from './components/TwoDegreeNodes';
-import { Barriers } from './components/Barriers';
+import { Tool, GraphNode, Rect as RectType } from './types';
 import YouAreHere from './components/YouAreHere';
 import Rect from './components/Rect';
 import RectPropertiesPanel from './components/RectPropertiesPanel';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { exportJSON, exportPDF } from './utils/export';
 import { useKeyboard } from './hooks/useKeyboard';
-import { emptyList } from './utils/constants';
 import useWindowSize from './hooks/useWindowSize';
 import { MousePositionContext, ClickListenersContext } from './contexts/mouse';
 import PolygonsLayer from './components/layers/PolygonsLayer';
 import { Provider } from 'react-redux';
 import { store } from './store';
+import GraphLayer from './components/layers/GraphLayer';
 
 const App: React.FC = () => {
   const [tool, setTool] = useState<Tool>('pan');
@@ -37,32 +30,6 @@ const App: React.FC = () => {
     stageRef.current?.height(window.innerHeight);
   })
   const clickListeners = useRef<(() => void)[]>([]);
-
-  const [graph, setGraph] = useLocalStorage<Graph>('graph', { nodes: [], edges: [] });
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [lastClickedNode, setLastClickedNode] = useState<GraphNode | null>(null);
-  const [isDrawingEdge, setIsDrawingEdge] = useState(true);
-  const [previewEdge, setPreviewEdge] = useState<{ from: GraphNode } | null>(null);
-  const [draggingGraphNode, setDraggingGraphNode] = useState<GraphNode | null>(null);
-  const handleGraphNodeDrag = (node: GraphNode) => {
-    if (!snappedMousePosition) return node;
-    setGraph(draft => {
-      const nodeToUpdate = draft.nodes.find(n => n.id === node.id);
-      if (nodeToUpdate) {
-        nodeToUpdate.x = snappedMousePosition.x;
-        nodeToUpdate.y = snappedMousePosition.y;
-      }
-    });
-    return { ...node, ...snappedMousePosition };
-  }
-  const handleDeleteEdge = useCallback(() => {
-    if (selectedEdgeId !== null) {
-      setGraph(prevGraph => removeEdge(prevGraph, selectedEdgeId));
-      setSelectedEdgeId(null);
-      setSelectedNodeId(null);
-    }
-  }, [selectedEdgeId]);
 
   const [rects, setRects] = useLocalStorage<RectType[]>('rects', []);
   const [selectedRectIndex, setSelectedRectIndex] = useState<number | null>(null);
@@ -92,37 +59,12 @@ const App: React.FC = () => {
   };
 
   const handleDelete = useCallback(() => {
-    handleDeleteEdge();
     handleDeleteRect();
-  }, [handleDeleteEdge, handleDeleteRect]);
+  }, [handleDeleteRect]);
 
-  const handleCancelEdge = useCallback(() => {
-    setIsDrawingEdge(false);
-    setPreviewEdge(null);
-  }, []);
-
-  const { isCtrlPressed } = useKeyboard({
+  useKeyboard({
     onDelete: handleDelete,
-    onCancel: handleCancelEdge,
   });
-
-  const allPoints = useMemo(() => {
-    if (tool === 'building' || tool === 'pavement') {
-      // return getAllPolygonPoints(polygons)//.concat(currentPolygon);
-    } else if (tool === 'pathwalk' || tool === 'road' || tool === 'fence') {
-      return getAllGraphPoints(graph.nodes)
-    } else {
-      // if (draggingPolygonNode) {
-      //   return getAllPolygonPoints(polygons, draggingPolygonNode.polygonIndex, draggingPolygonNode.nodeIndex)
-      // }
-      if (draggingGraphNode) {
-        return getAllGraphPoints(graph.nodes, draggingGraphNode.id)
-      }
-    }
-    return emptyList
-  }, [/*polygons, */graph, /*currentPolygon,*/ draggingGraphNode, tool])
-  const snappedInfo = snapPosition(mousePosition, allPoints);
-  const snappedMousePosition = snappedInfo?.snapped
 
   // Map state
   const handleZoom = (e: WheelEvent, stage: any) => {
@@ -172,58 +114,16 @@ const App: React.FC = () => {
     clickListeners.current.forEach(listener => listener());
     if (tool === 'building' || tool === 'pavement') {
     } else if (tool === 'select') {
-      setSelectedEdgeId(null)
-      setSelectedNodeId(null)
       setSelectedRectIndex(null);
     } else if (tool === 'pathwalk' || tool === 'road' || tool === 'fence') {
-      const newNode: GraphNode = {
-        id: Date.now().toString(),
-        x: snappedMousePosition!.x,
-        y: snappedMousePosition!.y,
-        edges: [],
-      };
-
-      const hoveredNode = null//graph.nodes.find(node => node.id === hoveredNodeId)
-      const nextNode = hoveredNode ?? newNode
-
-      setGraph(prevGraph => {
-        if (nextNode.id === newNode.id) {
-          prevGraph = addNode(prevGraph, newNode)
-        }
-        if (lastClickedNode && isDrawingEdge) {
-          const newEdge: GraphEdge = {
-            id: Date.now().toString(),
-            from: lastClickedNode.id,
-            to: nextNode.id,
-            ...(tool === 'road' ? (
-              { type: 'road', width: 10 }
-             ) : (
-              tool === 'fence' ? (
-                { type: 'fence' }
-               ) : (
-                { type: 'pathwalk' }
-              )
-            )),
-          };
-          return addEdge(prevGraph, newEdge)
-        } else {
-          return prevGraph
-        }
-      })
-      setPreviewEdge({ from: nextNode });
-      setLastClickedNode(nextNode);
-      setIsDrawingEdge(true);
     }
   };
 
   const handleToolChange = (newTool: Tool) => {
     setTool(newTool);
     if (newTool !== 'select') {
-      setSelectedEdgeId(null);
-      setSelectedNodeId(null);
       setSelectedRectIndex(null);
     }
-    setPreviewEdge(null);
   };
 
   const handleStageMouseDown = (e: any) => {
@@ -262,13 +162,6 @@ const App: React.FC = () => {
     setDrawingRect(null);
   };
 
-  const nodeById = useMemo(() => graph.nodes.reduce((acc, node) => {
-    acc.set(node.id, node);
-    return acc;
-  }, new Map<string, GraphNode>()), [graph.nodes]);
-
-  const selectedEdge = selectedEdgeId != null ? graph.edges.find(e => e.id === selectedEdgeId) : null
-
   const canvasPointerClass = (
     tool === 'pan' ? 'pan-tool' :
     tool === 'select' ? 'select-tool' :
@@ -300,19 +193,9 @@ const App: React.FC = () => {
           <Layer>
             <Group>
               <Rectangle x={-5000} y={-5000} width={10000} height={10000} fill="#e8f7e8" />
-              {[...graph.edges].sort(edgesCompareFn).map(edge => (
-                <GraphEdgeComponent
-                  key={edge.id}
-                  edge={edge}
-                  edges={graph.edges}
-                  nodes={nodeById}
-                  interactive={tool === 'select'}
-                  isSelected={selectedEdgeId === edge.id}
-                  onSelect={() => setSelectedEdgeId(edge.id)}
-                />
-              ))}
-              <Barriers edges={graph.edges} nodes={nodeById} />
-              <TwoDegreeNodes nodes={graph.nodes} edges={graph.edges} />
+              <GraphLayer tool={tool} />
+              {/* <Barriers edges={graph.edges} nodes={nodeById} /> */}
+              {/* <TwoDegreeNodes nodes={graph.nodes} edges={graph.edges} /> */}
               <Text text="Первомайская улица" x={300} y={620} fontSize={20} fill="rgba(0, 0, 0, 0.2)" />
               <Text text="Институтский переулок" x={979} y={280} fontSize={20} fill="rgba(0, 0, 0, 0.2)" rotationDeg={90}/>
               {rects.map((rect, index) => (
@@ -326,13 +209,6 @@ const App: React.FC = () => {
                 />
               ))}
               <PolygonsLayer centerDot={centerDot} tool={tool} />
-              {previewEdge && snappedMousePosition && (tool === 'pathwalk' || tool === 'road' || tool === 'fence') && (
-                <PreviewEdge
-                  from={previewEdge.from}
-                  to={snappedMousePosition}
-                  kind={tool}
-                />
-              )}
               {drawingRect && mousePosition && (
                 <Rectangle
                   x={drawingRect.x}
@@ -342,32 +218,6 @@ const App: React.FC = () => {
                   fill="rgba(0, 0, 0, 0.2)"
                 />
               )}
-              {graph.nodes.map(node => (
-                <GraphNodeComponent
-                  key={node.id}
-                  node={node}
-                  interactive={tool === 'select' || tool === 'pathwalk' || tool === 'road' || tool === 'fence'}
-                  isSelected={selectedNodeId === node.id}
-                  onSelect={() => setSelectedNodeId(node.id)}
-                  onDragMove={handleGraphNodeDrag}
-                  onDragStart={node => setDraggingGraphNode(node)}
-                  onDragEnd={() => setDraggingGraphNode(null)}
-                />
-              ))}
-              {snappedInfo && snappedInfo.snapLines.map((snapLine, index) => (
-                <Line
-                  key={index}
-                  points={[
-                    snapLine.from.x,
-                    snapLine.from.y,
-                    snapLine.to.x,
-                    snapLine.to.y
-                  ]}
-                  dash={[2, 2]}
-                  stroke="red"
-                  strokeWidth={1}
-                />
-              ))}
             </Group>
             <YouAreHere x={centerDot.x} y={centerDot.y} handleDotDrag={handleDotDrag} />
           </Layer>
@@ -377,7 +227,7 @@ const App: React.FC = () => {
       </div>
       <ToolPanel activeTool={tool} onToolChange={handleToolChange} />
       <PropertiesPanel />
-      {selectedEdge?.type === 'road' && (
+      {/* {selectedEdge?.type === 'road' && (
         <EdgePropertiesPanel
           edgeWidth={selectedEdge.width}
           onEdgeWidthChange={(newWidth) => {
@@ -387,7 +237,7 @@ const App: React.FC = () => {
             }));
           }}
         />
-      )}
+      )} */}
       {selectedRectIndex !== null && (
         <RectPropertiesPanel
           rect={rects[selectedRectIndex]}
@@ -405,47 +255,8 @@ const App: React.FC = () => {
 
 export default App;
 
-const edgesCompareFn = (a: GraphEdge, b: GraphEdge) => {
-  if (a.type === 'road') return 1;
-  if (b.type === 'road') return -1;
-  if (a.type === 'pathwalk') return 1;
-  if (b.type === 'pathwalk') return -1;
-  return 0;
-}
-
 function getAllGraphPoints(nodes: GraphNode[], excludeNodeId: string | null = null): number[][] {
   return nodes.filter(node => node.id !== excludeNodeId).map(node => [node.x, node.y]);
 };
 
-function addNode(graph: Graph, newNode: GraphNode): Graph {
-  return {
-    ...graph,
-    nodes: [...graph.nodes, { ...newNode, edges: [] }],
-  };
-};
 
-function addEdge(graph: Graph, newEdge: GraphEdge): Graph {
-  const updatedNodes = graph.nodes.map(node => {
-    if (node.id === newEdge.from || node.id === newEdge.to) {
-      return { ...node, edges: [...node.edges, newEdge.id] };
-    }
-    return node;
-  });
-
-  return {
-    nodes: updatedNodes,
-    edges: [...graph.edges, newEdge],
-  };
-};
-
-const removeEdge = (graph: Graph, edgeId: string): Graph => {
-  const updatedNodes = graph.nodes.map(node => ({
-    ...node,
-    edges: node.edges.filter(id => id !== edgeId),
-  }));
-
-  return {
-    nodes: updatedNodes.filter(node => node.edges.length > 0),
-    edges: graph.edges.filter(edge => edge.id !== edgeId),
-  };
-};

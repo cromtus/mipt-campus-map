@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { BuildingDescription, Polygon, TextAlignment } from '../types';
+import { BuildingDescription, Polygon } from '../types';
 import { DraftFunction } from 'use-immer';
 
 interface PolygonState {

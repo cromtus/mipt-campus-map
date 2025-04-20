@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Group, Line } from 'react-konva';
 import {  Entry } from '../../types';
-import EntryMarker from '../EntryMarker';
+import EntryMarker from './EntryMarker';
 import { union } from '@turf/union';
 import { featureCollection, polygon } from '@turf/helpers';
 import { projectPoint } from '../../utils/geometry';

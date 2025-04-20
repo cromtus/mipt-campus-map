@@ -9,6 +9,7 @@
     "@turf/union": "^7.1.0",
     "@use-gesture/react": "^10.3.1",
     "immer": "^10.1.1",
+    "json-loader": "^0.5.7",
     "jspdf": "^2.5.2",
     "konva": "^9.3.15",
     "react": "^18.3.1",
