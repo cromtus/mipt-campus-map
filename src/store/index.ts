@@ -3,7 +3,7 @@ import { TypedUseSelectorHook, useDispatch as useDispatchUntyped, useSelector as
 import { load, save } from 'redux-localstorage-simple';
 import polygonsReducer from './polygonsSlice';
 import graphReducer from './graphSlice';
-// import savedState from '../../assets/map.json'
+import savedState from '../../assets/map'
 
 // console.log('savedState', savedState);
 
@@ -14,11 +14,12 @@ export const store = configureStore({
   },
   preloadedState: {
     polygons: {
-      ...(load({ states: ['polygons'], namespace: '', namespaceSeparator: '' }) as any),
+      polygons: savedState.polygons as any,
       selectedIndex: -1
     },
     graph: {
-      ...(load({ states: ['graph'], namespace: '', namespaceSeparator: '' }) as any).graph,
+      nodes: savedState.graph.nodes as any,
+      edges: savedState.graph.edges as any,
       selectedEdgeId: null
     }
   },

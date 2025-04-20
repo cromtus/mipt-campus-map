@@ -246,7 +246,7 @@ const App: React.FC = () => {
       )}
       <div className="export-buttons">
         <button className="download-button" onClick={() => exportPDF(stageRef.current)}>Download PDF</button>
-        <button className="download-button" onClick={() => exportJSON()}>Export JSON</button>
+        {/* <button className="download-button" onClick={() => exportJSON()}>Export JSON</button> */}
       </div>
       </Provider>
     </div>
