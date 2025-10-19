@@ -44,14 +44,19 @@ const GraphEdgeComponent: React.FC<GraphEdgeProps> = ({
   };
 
   return (
-    <Line
-      points={[fromNode.x, fromNode.y, toNode.x, toNode.y]}
-      {...getStyle()}
-      onClick={interactive ? onSelect : undefined}
-      onTap={interactive ? onSelect : undefined}
-      onMouseEnter={interactive ? () => setIsHovered(true) : undefined}
-      onMouseLeave={interactive ? () => setIsHovered(false) : undefined}
-    />
+    <>
+      {edge.type === 'pathwalk' && (
+        <Line points={[fromNode.x, fromNode.y, toNode.x, toNode.y]} stroke="#e8f7e8" strokeWidth={4} />
+      )}
+      <Line
+        points={[fromNode.x, fromNode.y, toNode.x, toNode.y]}
+        {...getStyle()}
+        onClick={interactive ? onSelect : undefined}
+        onTap={interactive ? onSelect : undefined}
+        onMouseEnter={interactive ? () => setIsHovered(true) : undefined}
+        onMouseLeave={interactive ? () => setIsHovered(false) : undefined}
+      />
+    </>
   );
 };
 

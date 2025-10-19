@@ -194,8 +194,6 @@ const App: React.FC = () => {
             <Group>
               <Rectangle x={-5000} y={-5000} width={10000} height={10000} fill="#e8f7e8" />
               <GraphLayer tool={tool} />
-              {/* <Barriers edges={graph.edges} nodes={nodeById} /> */}
-              {/* <TwoDegreeNodes nodes={graph.nodes} edges={graph.edges} /> */}
               <Text text="Первомайская улица" x={300} y={620} fontSize={20} fill="rgba(0, 0, 0, 0.2)" />
               <Text text="Институтский переулок" x={979} y={280} fontSize={20} fill="rgba(0, 0, 0, 0.2)" rotationDeg={90}/>
               {rects.map((rect, index) => (

@@ -6,6 +6,8 @@ import { Tool, GraphNode, GraphEdge } from '../../types';
 import { updateNodePosition, setSelectedEdge } from '../../store/graphSlice';
 import PreviewEdge from '../PreviewEdge';
 import SelectedEdge from '../shapes/SelectedEdge';
+import { Barriers } from '../Barriers';
+import TwoDegreeNodes from '../TwoDegreeNodes';
 
 interface GraphLayerProps {
   tool: Tool;
@@ -35,6 +37,7 @@ const GraphLayer: React.FC<GraphLayerProps> = ({
 
   return (
     <>
+      <TwoDegreeNodes nodes={nodes} edges={edges} />
       {[...edges].sort(edgesCompareFn).map(edge => (
         <GraphEdgeComponent
           key={edge.id}
@@ -58,6 +61,7 @@ const GraphLayer: React.FC<GraphLayerProps> = ({
       ))}
       {/* {previewEdge && <PreviewEdge tool={tool} />} */}
       <SelectedEdge />
+      <Barriers edges={edges} nodes={nodeById} />
     </>
   );
 };
